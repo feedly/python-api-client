@@ -1,7 +1,7 @@
 # python-api-client
 Python client code for the feedly api https://developers.feedly.com/
 
-##Initializing a client
+## Initializing a client
 To initialize a client, first you need an access token. To just play around,
 login to feedly and go to the [console](http://feedly.com/i/console). Then find 
 the `feedlyToken` property. This is your web access token. You can make requests
@@ -26,7 +26,7 @@ or you can create a new one when needed. It's a bit more efficient to keep it ar
 do choose to create clients as needed, you should pass in the user's ID in the constructor, 
 otherwise you'll incur a `/v3/profile` request. 
 
-##API Oriented Usage
+## API Oriented Usage
 You can use the `FeedlySession` object to make arbitrary API requests. E.g.:
 
 ```
@@ -42,7 +42,7 @@ sess.do_api_request('/v3/feeds/feed%2Fhttp%3A%2F%2Fblog.feedly.com%2Ffeed%2F')
 }
 ```
 
-##Object Oriented Usage
+## Object Oriented Usage
 Alternatively, you can use the object oriented client, which facilitates common usage patterns.
 E.g. you can list your user categories:
 ```
@@ -68,7 +68,7 @@ sess.user.get_category('comics'))
 UserCategory: user/xxx/category/comics>
 ```
 
-####Accessing Entries (articles)
+#### Accessing Entries (articles)
 If you need to access entries or entry IDs, you can use easily stream them via `stream_contents`
 and `stream_ids`, respectively:
 
@@ -98,7 +98,7 @@ with FeedlySession(auth_token=token) as sess:
 ```
 
 
-##Odds and Ends
+## Odds and Ends
 Feedly APIs are rate limited. Do not make multiple requests concurrently. You can download
 quite a few entries at a time, increase the `StreamOptions.count` setting to stream data in
 larger chunks. Once you get rate limited, the client will stop any attempted requests until
