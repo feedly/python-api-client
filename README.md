@@ -90,7 +90,8 @@ that limits the total number of articles streamed. To download all items, someth
 like this could be done
 
 ```
-opts = StreamOptions(max_count=sys.maxsize)
+opts = StreamOptions(max_count=sys.maxsize) # down all items that exist
+opts.count = sys.maxsize # download as many items as possible in every API request
 with FeedlySession(auth_token=token) as sess:
     for eid in sess.user.get_category('politics').stream_ids(opts):
          print(eid)
