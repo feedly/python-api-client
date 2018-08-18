@@ -43,17 +43,17 @@ sess.do_api_request('/v3/feeds/feed%2Fhttp%3A%2F%2Fblog.feedly.com%2Ffeed%2F')
 ```
 
 ## Object Oriented Usage
-Alternatively, you can use the object oriented client, which facilitates common usage patterns.
+Alternatively, you can use the object oriented code, which facilitates common usage patterns.
 E.g. you can list your user categories:
 ```
 sess.user.get_categories()
 
 ------------------
 
-{'comics': UserCategory: user/xxx/category/comics>,
- 'econ': UserCategory: user/xxx/category/econ>,
- 'global.must': UserCategory: user/xxx/category/global.must>,
- 'politics': UserCategory: user/xxx/category/politics>,
+{'comics': <UserCategory: user/xxx/category/comics>,
+ 'econ': <UserCategory: user/xxx/category/econ>,
+ 'global.must': <UserCategory: user/xxx/category/global.must>,
+ 'politics': <UserCategory: user/xxx/category/politics>,
 }
 ```
 where `xxx` is your actual user ID.
@@ -65,7 +65,7 @@ sess.user.get_category('comics'))
 
 ------------------
 
-UserCategory: user/xxx/category/comics>
+<UserCategory: user/xxx/category/comics>
 ```
 
 #### Accessing Entries (articles)
@@ -85,9 +85,9 @@ Z/Hzx8NYfSSE8sweA2v5+4r5h7HC5ALdE2YGYB8MYbQ=_1654a26f3fe:79d9ef9:6f86c10b
 ...
 ```
 
-Take note of the `StreamOptions` class. There is an important `max_count` property
-that limits the total number of articles streamed. To download all items, something
-like this could be done
+Take note of the `StreamOptions` class. There are important `max_count` and `count`
+properties that control streaming. To download all items, something like this could
+be done:
 
 ```
 opts = StreamOptions(max_count=sys.maxsize) # down all items that exist
@@ -101,6 +101,7 @@ with FeedlySession(auth_token=token) as sess:
 
 ## Odds and Ends
 Feedly APIs are rate limited. Do not make multiple requests concurrently. You can download
-quite a few entries at a time, increase the `StreamOptions.count` setting to stream data in
-larger chunks. Once you get rate limited, the client will stop any attempted requests until
-you have available quota.
+quite a few entries at a time, see the previous section for details. Once you get rate limited,
+the client will stop any attempted requests until you have available quota.
+
+To debug things, set the log level to `DEBUG`. This will print log messages on every API request.
