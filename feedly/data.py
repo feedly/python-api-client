@@ -63,7 +63,7 @@ class Streamable(FeedlyData):
         return IdStream(self._client, self._get_id(), options)
 
     def __repr__(self):
-        return f'{type(self).__name__}: {self._get_id()}>'
+        return f'<{type(self).__name__}: {self._get_id()}>'
 
 class UserCategory(Streamable):
 

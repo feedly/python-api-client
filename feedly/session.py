@@ -148,27 +148,9 @@ if __name__ == '__main__':
         sess = FeedlySession(auth_token=token)
         print(sess.user['fullName'])
 
-        uid = 'd4be7934-074a-4af6-bce0-03aec43271d2'
+        uid = 'xxx'
 
         with FeedlySession(auth_token=token, user_id=uid) as sess:
             opts = StreamOptions(max_count=30)
             for i, eid in enumerate(sess.user.get_category('politics').stream_ids(opts)):
                 print(i, eid)
-
-        print(sess.rate_limiter)
-
-        # with FeedlySession(auth_token=token) as sess:
-        #     print(sess.user)
-        #     for i, entry in enumerate(sess.user.get_category('politics').stream_contents()):
-        #         print(i, entry.crawled)
-
-        # with FeedlySession(auth_token=token) as sess:
-        #     for label, tag in sess.user.get_tags().items():
-        #         print(label, tag.id)
-        #     print('-'*50)
-        #     # for label, cat in sess.user.get_categories().items():
-        #     #     print(label, cat.id)
-        #     # print('-'*50)
-        #
-        #     for entry in sess.user.get_tag('machine learning').stream_contents():
-        #         print(entry.id, entry.crawled)
