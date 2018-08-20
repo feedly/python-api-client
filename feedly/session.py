@@ -10,13 +10,12 @@ from urllib.parse import quote_plus
 from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError
 
-from future.backports import urllib
-from requests import Session, Response
+from requests import Session
 import urllib
 
-from feedly.data import FeedlyData, FeedlyUser
-from feedly.protocol import RateLimiter, RateLimitedAPIError, BadRequestAPIError, UnauthorizedAPIError, ServerAPIError, APIClient, WrappedHTTPError
-from feedly.stream import UserStreamId, STREAM_SOURCE_USER, StreamOptions, EnterpriseStreamId
+from feedly.data import FeedlyUser
+from feedly.protocol import RateLimitedAPIError, BadRequestAPIError, UnauthorizedAPIError, ServerAPIError, APIClient, WrappedHTTPError
+from feedly.stream import EnterpriseStreamId
 
 
 class FeedlySession(APIClient):
@@ -158,7 +157,7 @@ if __name__ == '__main__':
         token = (Path.home() / 'access.token').read_text().strip()
         # print(sess.user['fullName'])
 
-        uid = 'd4be7934-074a-4af6-bce0-03aec43271d2'
+        uid = 'uid'
         sess = FeedlySession(auth_token=token, user_id=uid)
 
         # sess.user.get_enterprise_tags()
