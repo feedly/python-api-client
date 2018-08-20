@@ -43,6 +43,8 @@ sess.do_api_request('/v3/feeds/feed%2Fhttp%3A%2F%2Fblog.feedly.com%2Ffeed%2F')
 ```
 
 ## Object Oriented Usage
+
+#### Retrieving Articles
 Alternatively, you can use the object oriented code, which facilitates common usage patterns.
 E.g. you can list your user categories:
 ```
@@ -98,6 +100,11 @@ with FeedlySession(auth_token=token) as sess:
 
 ```
 
+#### Tagging Existing Entries
+```
+with FeedlySession(auth_token=token) as sess:
+    sess.get_tag('politics').tag_entry(eid)
+```
 
 ## Odds and Ends
 Feedly APIs are rate limited. Do not make multiple requests concurrently. You can download

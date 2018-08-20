@@ -4,9 +4,10 @@
    raw json passed back by the client.
 """
 from typing import Any, Dict, Optional
+from urllib.parse import quote_plus
 
 from feedly.protocol import APIClient
-from feedly.stream import STREAM_SOURCE_USER, StreamOptions, StreamBase, UserStreamId
+from feedly.stream import STREAM_SOURCE_USER, StreamOptions, StreamBase, UserStreamId, EnterpriseStreamId, StreamIdBase, STREAM_SOURCE_ENTERPRISE
 
 
 class FeedlyData:
@@ -48,6 +49,7 @@ class ContentStream(StreamBase):
         super().__init__(client, id_, options, 'contents', 'items', Entry)
 
 
+
 class Streamable(FeedlyData):
     def _get_id(self):
         return self['id']
@@ -65,18 +67,36 @@ class Streamable(FeedlyData):
     def __repr__(self):
         return f'<{type(self).__name__}: {self._get_id()}>'
 
+class TagBase(Streamable):
+
+    def tag_entry(self, entry_id:str):
+        self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put', data={'entryId': entry_id})
+
 class UserCategory(Streamable):
 
     @property
     def stream_id(self):
-        return UserStreamId(self.id, self.id.split('/'))
+        return UserStreamId(self['id'], self['id'].split('/'))
 
 
-class UserTag(Streamable):
+class UserTag(TagBase):
 
     @property
     def stream_id(self):
-        return UserStreamId(self.id, self.id.split('/'))
+        return UserStreamId(self['id'], self['id'].split('/'))
+
+class EnterpriseCategory(Streamable):
+
+    @property
+    def stream_id(self):
+        return EnterpriseStreamId(self['id'], self['id'].split('/'))
+
+
+class EnterpriseTag(TagBase):
+
+    @property
+    def stream_id(self):
+        return EnterpriseStreamId(self['id'], self['id'].split('/'))
 
 class Entry(FeedlyData):
     pass
@@ -85,8 +105,10 @@ class Entry(FeedlyData):
 class FeedlyUser(FeedlyData):
     def __init__(self, profile_json:Dict[str, Any], client:APIClient):
         super().__init__(profile_json, client)
-        self.categories:Dict[str, 'UserCategory'] = None
-        self.tags:Dict[str: 'UserTag'] = None
+        self._categories:Dict[str, 'UserCategory'] = None
+        self._enterprise_categories:Dict[str, 'EnterpriseCategory'] = None
+        self._tags: Dict[str: 'UserTag'] = None
+        self._enterprise_tags: Dict[str: 'EnterpriseTag'] = None
         self._populated = len(profile_json) > 1
 
     def __getitem__(self, item):
@@ -122,45 +144,70 @@ class FeedlyUser(FeedlyData):
         return self['enterpriseName']
 
     def _onchange(self):
-        self.categories = None
-        self.tags = None
+        self._categories = None
+        self._tags = None
+
+    def _get_categories_or_tags(self, endpoint, factory):
+        rv = {}
+        resp = self._client.do_api_request(endpoint)
+        for item in resp:
+            item = factory(item, self._client)
+            rv[item.stream_id.content_id] = item
+
+        return rv
 
     def get_categories(self, refresh: bool = False) -> Dict[str, 'UserCategory']:
-        if self.categories is None or refresh:
-            resp = self._client.do_api_request('/v3/categories')
-            categories = [UserCategory(j, self._client) for j in resp]
-            self.categories = {c.stream_id.content_id: c for c in categories}
+        if self._categories is None or refresh:
+            self._categories = self._get_categories_or_tags('/v3/categories', UserCategory)
 
-        return self.categories
+        return self._categories
 
-    def get_tags(self, refresh: bool = False) -> Dict[str, 'UserCategory']:
-        if self.tags is None or refresh:
-            resp = self._client.do_api_request('/v3/tags')
-            tags = [UserTag(j, self._client) for j in resp]
-            self.tags = {t.stream_id.content_id: t for t in tags}
+    def get_enterprise_categories(self, refresh: bool = False) -> Dict[str, 'EnterpriseCategory']:
+        if self._enterprise_categories is None or refresh:
+            self._enterprise_categories = self._get_categories_or_tags('/v3/enterprise/collections', EnterpriseCategory)
+            if self._enterprise_categories:
+                self.json['enterpriseName'] = next(iter(self._enterprise_categories.values())).stream_id.source
 
-        return self.tags
+        return self._enterprise_categories
 
-    def get_category(self, name):
-        id_ = '/'.join([STREAM_SOURCE_USER, self.id, 'category', name])
+    def get_tags(self, refresh: bool = False) -> Dict[str, 'UserTag']:
+        if self._tags is None or refresh:
+            self._tags = self._get_categories_or_tags('/v3/tags', UserTag)
 
-        if self.categories:
-            data = self.categories.get(name)
+        return self._tags
+
+    def get_enterprise_tags(self, refresh: bool = False) -> Dict[str, 'EnterpriseTag']:
+        if self._enterprise_tags is None or refresh:
+            self._enterprise_tags = self._get_categories_or_tags('/v3/enterprise/tags', EnterpriseTag)
+            if self._enterprise_tags:
+                self.json['enterpriseName'] = next(iter(self._enterprise_tags.values())).stream_id.source
+
+        return self._enterprise_tags
+
+    def _get_category_or_tag(self, stream_id:StreamIdBase, cache, factory):
+        if cache:
+            data = cache.get(stream_id.content_id)
             if data:
                 return data
             raise ValueError(f'{id_} does not exist')
 
-        return UserCategory({'id': id_}, self._client)
+        return factory({'id': stream_id.id}, self._client)
 
-    def get_tag(self, name) -> 'UserTag':
-        id_ = '/'.join([STREAM_SOURCE_USER, self.id, 'tag', name])
+    def get_category(self, name:str):
+        id_ = UserStreamId(parts=[STREAM_SOURCE_USER, self.id, 'category', name])
 
-        if self.tags:
-            data = self.tags.get(name)
-            if data:
-                return data
-            raise ValueError(f'{id_} does not exist')
+        return self._get_category_or_tag(id_, self._categories, UserCategory)
 
-        return UserTag({'id': id_}, self._client)
+    def get_tag(self, name:str) -> 'UserTag':
+        id_ = UserStreamId(parts=[STREAM_SOURCE_USER, self.id, 'tag', name])
+
+        return self._get_category_or_tag(id_, self._tags, UserTag)
+
+    def get_enterprise_category(self, stream_id:EnterpriseStreamId) -> 'EnterpriseCategory':
+        return self._get_category_or_tag(stream_id, self._tags, EnterpriseCategory)
+
+    def get_enterprise_tag(self, stream_id:EnterpriseStreamId) -> 'EnterpriseTag':
+        return self._get_category_or_tag(stream_id, self._tags, EnterpriseTag)
+
 
 

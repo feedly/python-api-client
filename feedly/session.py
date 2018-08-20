@@ -5,23 +5,32 @@ from typing import Dict, Any, Union, List, Optional
 import logging
 
 import datetime
+from urllib.parse import quote_plus
+
+from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError
 
 from future.backports import urllib
-from requests import Session
+from requests import Session, Response
 import urllib
 
 from feedly.data import FeedlyData, FeedlyUser
-from feedly.protocol import RateLimiter, RateLimitedAPIError, BadRequestAPIError, UnauthorizedAPIError, ServerAPIError, APIClient
-from feedly.stream import UserStreamId, STREAM_SOURCE_USER, StreamOptions
+from feedly.protocol import RateLimiter, RateLimitedAPIError, BadRequestAPIError, UnauthorizedAPIError, ServerAPIError, APIClient, WrappedHTTPError
+from feedly.stream import UserStreamId, STREAM_SOURCE_USER, StreamOptions, EnterpriseStreamId
 
 
 class FeedlySession(APIClient):
-    def __init__(self, auth_token:str, api_host:str='https://feedly.com', name:str='feedly.python.client', user_id:str=None):
+    def __init__(self, auth_token:str, api_host:str='https://feedly.com', name:str='feedly.python.client',
+                 user_id:str=None, client_name='feedly.python.client'):
         super().__init__()
+        if not client_name:
+            raise ValueError('you must identify your client!')
+
         self.auth_token:str = auth_token
         self.api_host:str = api_host
         self.session = Session()
+        self.session.mount('https://feedly.com', HTTPAdapter(max_retries=1)) # as to treat feedly server and connection errors identically
+        self.client_name = client_name
         self.timeout:int = 10
         self.max_tries:int = 3
         self.name = urllib.parse.quote_plus(name)
@@ -88,7 +97,7 @@ class FeedlySession(APIClient):
 
         full_url = f'{self.api_host}{relative_url}'
         if '?client=' not in full_url and '&client=' not in full_url:
-            full_url += ('&' if '?' in full_url else '?') + 'client=feedly.python.client'
+            full_url += ('&' if '?' in full_url else '?') + 'client=' + quote_plus(self.client_name)
 
         tries = 0
         if method is None:
@@ -102,30 +111,32 @@ class FeedlySession(APIClient):
                 raise RateLimitedAPIError(None)
             while True:
                 tries += 1
+                if self.rate_limiter.rate_limited:
+                    until = datetime.datetime.fromtimestamp(self.rate_limiter.until).isoformat()
+                    raise ValueError(f'Too many requests. Client is rate limited until {until}')
+                headers = {'Authorization': self.auth_token}
+                if data:
+                    headers['Content-Type'] = 'application/json'
+
                 resp = None
+                conn_error = None
                 try:
-                    if self.rate_limiter.rate_limited:
-                        until = datetime.datetime.fromtimestamp(self.rate_limiter.until).isoformat()
-                        raise ValueError(f'Too many requests. Client is rate limited until {until}')
-                    headers = {'Authorization': self.auth_token}
-
                     resp = self.session.request(method, full_url, headers=headers, timeout=timeout, json=data, verify=False)
-                    self.rate_limiter.update(resp)
-                    if resp.ok:
-                        return resp.json() if resp.content is not None and len(resp.content) > 0 else None
-                    else:
-                        if tries == max_tries or 400 > resp.status_code >= 500: # don't retry bad requests
-                            resp.raise_for_status()
-                        logging.warning('Error for %s: %s', relative_url, resp.text)
-                except Exception as e:
-                    if tries == max_tries:
-                        if resp is not None and resp.headers is not None:
-                            for k, v in resp.headers.items():
-                                logging.debug('  FAILURE HEADER %s: %s', k, v)
+                except OSError as e:
+                    conn_error = e
 
-                            logging.error('feedly API request failed %d times (%s): %s', tries, full_url, e)
-                        raise e
-                    logging.warning('feedly API request failed (%s): %s (try %d)', full_url, e, tries)
+                if resp:
+                    self.rate_limiter.update(resp)
+
+                if not conn_error and resp.ok:
+                    return resp.json() if resp.content is not None and len(resp.content) > 0 else None
+                else:
+                    if tries == max_tries or (resp is not None and 400 <= resp.status_code <= 500): # don't retry bad requests:
+                        if conn_error:
+                            raise conn_error
+                        else:
+                            resp.raise_for_status()
+                    logging.warning('Error for %s: %s', relative_url, conn_error if conn_error else resp.text)
                     time.sleep(2 ** (tries - 1))  # 1 second, then 2, 4, 8, etc.
         except HTTPError as e:
             code = e.response.status_code
@@ -145,12 +156,20 @@ class FeedlySession(APIClient):
 if __name__ == '__main__':
         logging.basicConfig(level='DEBUG')
         token = (Path.home() / 'access.token').read_text().strip()
-        sess = FeedlySession(auth_token=token)
-        print(sess.user['fullName'])
+        # print(sess.user['fullName'])
 
-        uid = 'xxx'
+        uid = 'd4be7934-074a-4af6-bce0-03aec43271d2'
+        sess = FeedlySession(auth_token=token, user_id=uid)
 
-        with FeedlySession(auth_token=token, user_id=uid) as sess:
-            opts = StreamOptions(max_count=30)
-            for i, eid in enumerate(sess.user.get_category('politics').stream_ids(opts)):
-                print(i, eid)
+        # sess.user.get_enterprise_tags()
+        # sess.user.get_enterprise_categories()
+
+        try:
+            tag = sess.user.get_enterprise_tag(EnterpriseStreamId('enterprise/feedly/tag/f057ceb9-9bc3-4c7d-9f0d-1e196618c8e4'))
+            tag.tag_entry('Qcc6iYC158HT/tOeW9SjCKvTX2rCjBiBdS6T0SwRE50=_165206cbca0:41da5dc:6f86c10b')
+        except WrappedHTTPError as e:
+            print(e.message)
+        # with FeedlySession(auth_token=token, user_id=uid) as sess:
+        #     opts = StreamOptions(max_count=30)
+        #     for i, eid in enumerate(sess.user.get_category('politics').stream_ids(opts)):
+        #         print(i, eid)

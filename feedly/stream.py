@@ -11,9 +11,10 @@ STREAM_SOURCE_UNKNOWN:str = 'unk'
 
 
 class StreamIdBase:
-    def __init__(self, id_:str, source:str, type:str, content_id:str):
+    def __init__(self, id_:str, source:str, source_id:str, type:str, content_id:str):
         self.id = id_
         self.source = source
+        self.source_id = source_id
         self.type = type
         self.content_id = content_id
 
@@ -44,12 +45,18 @@ class StreamIdBase:
     def __str__(self):
         return self.__repr__()
 
+
 class UserStreamId(StreamIdBase):
-    def __init__(self, id_:str, parts:List[str]):
+    def __init__(self, id_:str=None, parts:List[str]=None):
+        if id_ is None:
+            id_ = '/'.join(parts)
+        if parts is None:
+            parts = id_.split('/')
+
         if not id_.startswith(STREAM_SOURCE_USER):
             raise ValueError('not a user stream: ' + id)
 
-        super().__init__(id_, STREAM_SOURCE_USER, parts[2], '/'.join(parts[3:]))
+        super().__init__(id_, STREAM_SOURCE_USER, parts[1], parts[2], '/'.join(parts[3:]))
 
     def is_category(self):
         return self.type == 'category'
@@ -59,11 +66,16 @@ class UserStreamId(StreamIdBase):
 
 
 class EnterpriseStreamId(StreamIdBase):
-    def __init__(self, id_:str, parts:List[str]):
-        if not id_.startswith(STREAM_SOURCE_ENTERPRISE):
-            raise ValueError('not a user stream: ' + id)
+    def __init__(self, id_:str=None, parts:List[str]=None):
+        if id_ is None:
+            id_ = '/'.join(parts)
+        if parts is None:
+            parts = id_.split('/')
 
-        super().__init__(id_, STREAM_SOURCE_ENTERPRISE, parts[2], parts[3])
+        if not id_.startswith(STREAM_SOURCE_ENTERPRISE):
+            raise ValueError('not an enterprise stream: ' + id)
+
+        super().__init__(id_, STREAM_SOURCE_ENTERPRISE, parts[1], parts[2], parts[3])
 
     def is_category(self):
         return self.type == 'category'
