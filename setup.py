@@ -21,9 +21,12 @@ REQUIRES_PYTHON = '>=3.6.0'
 VERSION = 0.1
 
 # What packages are required for this module to be executed?
-REQUIRED = [
-    'requests>=2.19.1'
-]
+#REQUIRED = [
+    # 'requests', 'maya', 'records',
+#]
+with open('requirements.txt') as f:
+    REQUIRED = f.read().splitlines()
+
 
 # What packages are optional?
 EXTRAS = {
