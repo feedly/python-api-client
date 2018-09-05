@@ -11,11 +11,21 @@ STREAM_SOURCE_UNKNOWN:str = 'unk'
 
 
 class StreamIdBase:
-    def __init__(self, id_:str, source:str, source_id:str, type:str, content_id:str):
+    """
+    StreamIds are composed of several parts separated by a /.
+    """
+    def __init__(self, id_:str, source:str, source_id:str, type_:str, content_id:str):
+        """
+        :param id_: the full stream id string
+        :param source: the source. typically this is "user" or "enterprise"
+        :param source_id: the id of the source, e.g. a user ID.
+        :param type_: the type of the stream, typically "category" or "tag"
+        :param content_id: the content id, for user sourced strings, this is plain text like "gaming". For enterprise streams this is a UUID.
+        """
         self.id = id_
         self.source = source
         self.source_id = source_id
-        self.type = type
+        self.type = type_
         self.content_id = content_id
 
     @property
@@ -47,6 +57,12 @@ class StreamIdBase:
 
 
 class UserStreamId(StreamIdBase):
+    """
+    A user stream. For a user with ID 'abcd', some examples might be:
+    user/abcd/category/gaming
+    or
+    user/abcd/tag/recipes
+    """
     def __init__(self, id_:str=None, parts:List[str]=None):
         if id_ is None:
             id_ = '/'.join(parts)
@@ -67,6 +83,13 @@ class UserStreamId(StreamIdBase):
 
 class EnterpriseStreamId(StreamIdBase):
     def __init__(self, id_:str=None, parts:List[str]=None):
+        """
+        An enterprise (team) stream. For a team named 'Acme', some examples might be:
+        enterprise/acme/category/bbbbbbbb-3333-4444-1111-aaaaaaaaaaaa
+        or
+        enterprise/acme/tag/aaaaaaaa-0000-1111-2222-333333333333
+        """
+
         if id_ is None:
             id_ = '/'.join(parts)
         if parts is None:

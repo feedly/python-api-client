@@ -103,7 +103,7 @@ with FeedlySession(auth_token=token) as sess:
 #### Tagging Existing Entries
 ```
 with FeedlySession(auth_token=token) as sess:
-    sess.get_tag('politics').tag_entry(eid)
+    sess.user.get_tag('politics').tag_entry(eid)
 ```
 
 ## Odds and Ends

@@ -163,11 +163,6 @@ if __name__ == '__main__':
         # sess.user.get_enterprise_tags()
         # sess.user.get_enterprise_categories()
 
-        try:
-            tag = sess.user.get_enterprise_tag(EnterpriseStreamId('enterprise/feedly/tag/f057ceb9-9bc3-4c7d-9f0d-1e196618c8e4'))
-            tag.tag_entry('Qcc6iYC158HT/tOeW9SjCKvTX2rCjBiBdS6T0SwRE50=_165206cbca0:41da5dc:6f86c10b')
-        except WrappedHTTPError as e:
-            print(e.message)
         # with FeedlySession(auth_token=token, user_id=uid) as sess:
         #     opts = StreamOptions(max_count=30)
         #     for i, eid in enumerate(sess.user.get_category('politics').stream_ids(opts)):
