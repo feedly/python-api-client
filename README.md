@@ -15,11 +15,11 @@ If we assume you saved the token value in a `access.token` file in your home dir
 initalize the client as follows:
 
 ```
-from pathlib import path
+from pathlib import Path
 from feedly.session import FeedlySession
 
 token = (Path.home() / 'access.token').read_text().strip()
-sess = FeedlySession(auth_token=token)
+sess = FeedlySession(token)
 ```
 Clients are lightweight -- you can keep a client around for the lifetime of your program,
 or you can create a new one when needed. It's a bit more efficient to keep it around. If you
@@ -112,3 +112,9 @@ quite a few entries at a time, see the previous section for details. Once you ge
 the client will stop any attempted requests until you have available quota.
 
 To debug things, set the log level to `DEBUG`. This will print log messages on every API request.
+
+### Token Management
+The above examples assume the auth (access) token is valid. However these tokens do expire. Instead 
+of passing the auth token itself, you can create a `feedly.session.Auth` implementation to refresh
+the auth token. A file based implementation is already provided (`FileAuthStore`). Once this is done
+the client will automatically try to refresh the auth token if a `401` response is encountered.  
