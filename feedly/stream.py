@@ -37,7 +37,7 @@ class StreamIdBase:
         return self.source == STREAM_SOURCE_ENTERPRISE
 
     @staticmethod
-    def from_string(self, id_:str):
+    def from_string(id_:str):
         parts = id_.split('/')
         if len(parts) < 4:
             raise ValueError(f'invalid id {id_}')
@@ -50,7 +50,7 @@ class StreamIdBase:
             return StreamIdBase(id_, STREAM_SOURCE_UNKNOWN, 'unknown', 'unknown')
 
     def __repr__(self):
-        return f'StreamId: {self.id_}>'
+        return f'<stream:{self.id}>'
 
     def __str__(self):
         return self.__repr__()

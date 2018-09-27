@@ -1,3 +1,4 @@
+from pprint import pprint
 import time
 from pathlib import Path
 from typing import Dict, Any, Union, List, Optional
@@ -14,6 +15,7 @@ from requests import Session
 
 from feedly.data import FeedlyUser
 from feedly.protocol import RateLimitedAPIError, BadRequestAPIError, UnauthorizedAPIError, ServerAPIError, APIClient, WrappedHTTPError
+from feedly.stream import StreamIdBase
 
 
 class Auth:
@@ -225,10 +227,5 @@ if __name__ == '__main__':
 
         sess = FeedlySession(auth)
 
-        sess.user.get_enterprise_tags()
-        # sess.user.get_enterprise_categories()
-
-        # with FeedlySession(auth_token=token, user_id=uid) as sess:
-        #     opts = StreamOptions(max_count=30)
-        #     for i, eid in enumerate(sess.user.get_category('politics').stream_ids(opts)):
-        #         print(i, eid)
+        for k, v in sess.user.get_categories().items():
+            pprint(f"{k} -- {v['label']}")
