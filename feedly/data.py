@@ -3,7 +3,7 @@
    handy getter methods, but otherwise you can just use a .json property to access the
    raw json passed back by the client.
 """
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Dict, Optional, Callable, Union
 from urllib.parse import quote_plus
 
 from feedly.protocol import APIClient
@@ -197,21 +197,53 @@ class FeedlyUser(FeedlyData):
 
         return factory({'id': stream_id.id}, self._client)
 
-    def get_category(self, name:str):
-        id_ = UserStreamId(parts=[STREAM_SOURCE_USER, self.id, 'category', name])
+    def get_category(self, key:Union[str, UserStreamId]):
+        """
+        :param key: the id of the category (e.g. "recipes"), or stream ID object
+        :return: the category
+        """
+        if isinstance(key, str):
+            id_ = UserStreamId(parts=[STREAM_SOURCE_USER, self.id, 'category', key])
+        else:
+            id_ = key
 
         return self._get_category_or_tag(id_, self._categories, UserCategory, False)
 
-    def get_tag(self, name:str) -> 'UserTag':
-        id_ = UserStreamId(parts=[STREAM_SOURCE_USER, self.id, 'tag', name])
+    def get_tag(self, key:Union[str, UserStreamId]) -> 'UserTag':
+        """
+        :param key: the id of the tag (e.g. "recipes"), or stream ID object
+        :return: the category
+        """
+        if isinstance(key, str):
+            id_ = UserStreamId(parts=[STREAM_SOURCE_USER, self.id, 'tag', key])
+        else:
+            id_ = key
 
         return self._get_category_or_tag(id_, self._tags, UserTag, True)
 
-    def get_enterprise_category(self, stream_id:EnterpriseStreamId) -> 'EnterpriseCategory':
-        return self._get_category_or_tag(stream_id, self._tags, EnterpriseCategory, False)
+    def get_enterprise_category(self, key:Union[str, EnterpriseStreamId]) -> 'EnterpriseCategory':
+        """
+        :param key: the UUID of the category (dash separated hex numbers), or a stream ID object)
+        :return: the category
+        """
+        if isinstance(key, str):
+            id_ = EnterpriseStreamId(parts=[STREAM_SOURCE_ENTERPRISE, self.enterprise_name, 'category', key])
+        else:
+            id_ = key
 
-    def get_enterprise_tag(self, stream_id:EnterpriseStreamId) -> 'EnterpriseTag':
-        return self._get_category_or_tag(stream_id, self._tags, EnterpriseTag, False)
+        return self._get_category_or_tag(id_, self._enterprise_categories, EnterpriseCategory, False)
+
+    def get_enterprise_tag(self, key:Union[str, EnterpriseStreamId]) -> 'EnterpriseTag':
+        """
+        :param key: the UUID of the tag (dash separated hex numbers), or a stream ID object)
+        :return: the category
+        """
+        if isinstance(key, str):
+            id_ = EnterpriseStreamId(parts=[STREAM_SOURCE_ENTERPRISE, self.enterprise_name, 'tag', key])
+        else:
+            id_ = key
+
+        return self._get_category_or_tag(id_, self._enterprise_tags, EnterpriseTag, False)
 
 
 

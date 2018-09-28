@@ -157,7 +157,6 @@ class StreamBase:
             if self.continuation is not None and n < self.options._max_count:
                 curl = f'{url}&continuation={quote_plus(self.continuation)}' if self.continuation else url
 
-                logging.debug('url: %s', curl)
                 resp = self._client.do_api_request(curl)
                 self.continuation = resp.get('continuation')
                 if resp and self._items_prop in resp:
