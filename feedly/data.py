@@ -72,6 +72,21 @@ class TagBase(Streamable):
     def tag_entry(self, entry_id:str):
         self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put', data={'entryId': entry_id})
 
+    def tag_entries(self, entry_ids: List[str]):
+        self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put',
+                                    data={'entryIds': [entry_id for entry_id in entry_ids]})
+
+    def empty(self):
+        self._client.do_api_request(
+            f'/v3/tags/{quote_plus(self["id"])}/'
+            f'{",".join([quote_plus(a.json["id"]) for a in self.stream_contents()])}', method='DELETE')
+
+    def remove_annotations(self):
+        for a in self.stream_contents():
+            for annotation in a.json['annotations']:
+                self._client.do_api_request(f"v3/annotations/{quote_plus(annotation['id'])}", method='DELETE')
+
+
 class UserCategory(Streamable):
 
     @property
@@ -245,5 +260,7 @@ class FeedlyUser(FeedlyData):
 
         return self._get_category_or_tag(id_, self._enterprise_tags, EnterpriseTag, False)
 
-
-
+    def comment(self, entry_id: str, comment: str, slackMentions=[], emailMentions=[]):
+        self._client.do_api_request(f'/v3/annotations', method='post',
+                                    data={'comment': comment, 'entryId': entry_id, 'emailMentions': emailMentions,
+                                          'slackMentions': slackMentions})
