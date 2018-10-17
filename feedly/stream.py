@@ -113,8 +113,8 @@ class StreamOptions:
     note camel casing...this is on purpose so we can just use the __dict__ of the object
     to produce url parameters
     """
-    def __init__(self, max_count:int=100):
-        self.count:int = 20
+    def __init__(self, max_count:int=100, count:int = 20):
+        self.count:int = count
         self.ranked:str = 'newest'
         self.unreadOnly:bool = False
         self.newerThan:int = None

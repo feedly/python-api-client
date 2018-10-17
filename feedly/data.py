@@ -3,17 +3,19 @@
    handy getter methods, but otherwise you can just use a .json property to access the
    raw json passed back by the client.
 """
-from typing import Any, Dict, Optional, Callable, Union
+from typing import Any, Dict, Optional, Callable, Union, List
 from urllib.parse import quote_plus
 
 from feedly.protocol import APIClient
-from feedly.stream import STREAM_SOURCE_USER, StreamOptions, StreamBase, UserStreamId, EnterpriseStreamId, StreamIdBase, STREAM_SOURCE_ENTERPRISE
-import logging
+from feedly.stream import STREAM_SOURCE_USER, StreamOptions, StreamBase, UserStreamId, EnterpriseStreamId, StreamIdBase, \
+    STREAM_SOURCE_ENTERPRISE
+
 
 class FeedlyData:
-    def __init__(self, json:Dict[str,Any], client:APIClient=None):
+    def __init__(self, json: Dict[str, Any], client: APIClient = None):
         self._json = json
         self._client = client
+
     def _onchange(self):
         # sub classes should clear any cached items here
         pass
@@ -33,11 +35,13 @@ class FeedlyData:
     def __setitem__(self, key, value):
         self.json[key] = value
 
+
 class IdStream(StreamBase):
     """
     stream entry ids, e.g. https://developers.feedly.com/v3/streams/#get-a-list-of-entry-ids-for-a-specific-stream
     """
-    def __init__(self, client:APIClient, id_:str, options:StreamOptions):
+
+    def __init__(self, client: APIClient, id_: str, options: StreamOptions):
         super().__init__(client, id_, options, 'ids', 'ids', lambda x: x)
 
 
@@ -45,21 +49,21 @@ class ContentStream(StreamBase):
     """
     stream entries, e.g. https://developers.feedly.com/v3/streams/#get-the-content-of-a-stream
     """
-    def __init__(self, client:APIClient, id_:str, options:StreamOptions):
-        super().__init__(client, id_, options, 'contents', 'items', Entry)
 
+    def __init__(self, client: APIClient, id_: str, options: StreamOptions):
+        super().__init__(client, id_, options, 'contents', 'items', Entry)
 
 
 class Streamable(FeedlyData):
     def _get_id(self):
         return self['id']
 
-    def stream_contents(self, options:StreamOptions=None):
+    def stream_contents(self, options: StreamOptions = None):
         if not options:
             options = StreamOptions()
         return ContentStream(self._client, self._get_id(), options)
 
-    def stream_ids(self, options:StreamOptions=None):
+    def stream_ids(self, options: StreamOptions = None):
         if not options:
             options = StreamOptions()
         return IdStream(self._client, self._get_id(), options)
@@ -67,27 +71,47 @@ class Streamable(FeedlyData):
     def __repr__(self):
         return f'<{type(self).__name__}: {self._get_id()}>'
 
+    def remove_annotations(self, user, options: StreamOptions = None):  # TODO FeedlyUser
+        for a in self.stream_contents(options):
+            if 'annotations' in a.json:
+                for annotation in a.json['annotations']:
+                    if user['id'] == annotation['author']:
+                        self._client.do_api_request(f"v3/annotations/{quote_plus(annotation['id'])}", method='DELETE')
+
+
 class TagBase(Streamable):
 
-    def tag_entry(self, entry_id:str):
+    def tag_entry(self, entry_id: str):
         self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put', data={'entryId': entry_id})
 
     def tag_entries(self, entry_ids: List[str]):
         self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put',
                                     data={'entryIds': [entry_id for entry_id in entry_ids]})
 
-    def empty(self):
+    def empty(self, only_self=True):
         self._client.do_api_request(
             f'/v3/tags/{quote_plus(self["id"])}/'
             f'{",".join([quote_plus(a.json["id"]) for a in self.stream_contents()])}', method='DELETE')
 
-    def remove_annotations(self):
+
+class CategoryBase(Streamable):
+    def remove_tags(self, user):  # TODO add :FeedlyUser ?
         for a in self.stream_contents():
-            for annotation in a.json['annotations']:
-                self._client.do_api_request(f"v3/annotations/{quote_plus(annotation['id'])}", method='DELETE')
+            if 'tags' in a.json:
+                for t in a['tags']:
+                    if t['label'] == '':
+                        continue
+                    tag_id = t['id']
+                    if tag_id.startswith('enterprise'):
+                        tagged_by_user = t.get('addedBy')
+                    else:
+                        tagged_by_user = tag_id[5:tag_id.find('/', 5)]
+                    if tagged_by_user == user['id']:
+                        self._client.do_api_request(
+                            f'/v3/tags/{quote_plus(tag_id)}/{quote_plus(a["id"])}', method='DELETE')
 
 
-class UserCategory(Streamable):
+class UserCategory(CategoryBase):
 
     @property
     def stream_id(self):
@@ -100,7 +124,8 @@ class UserTag(TagBase):
     def stream_id(self):
         return UserStreamId(self['id'], self['id'].split('/'))
 
-class EnterpriseCategory(Streamable):
+
+class EnterpriseCategory(CategoryBase):
 
     @property
     def stream_id(self):
@@ -113,15 +138,16 @@ class EnterpriseTag(TagBase):
     def stream_id(self):
         return EnterpriseStreamId(self['id'], self['id'].split('/'))
 
+
 class Entry(FeedlyData):
     pass
 
 
 class FeedlyUser(FeedlyData):
-    def __init__(self, profile_json:Dict[str, Any], client:APIClient):
+    def __init__(self, profile_json: Dict[str, Any], client: APIClient):
         super().__init__(profile_json, client)
-        self._categories:Dict[str, 'UserCategory'] = None
-        self._enterprise_categories:Dict[str, 'EnterpriseCategory'] = None
+        self._categories: Dict[str, 'UserCategory'] = None
+        self._enterprise_categories: Dict[str, 'EnterpriseCategory'] = None
         self._tags: Dict[str: 'UserTag'] = None
         self._enterprise_tags: Dict[str: 'EnterpriseTag'] = None
         self._populated = len(profile_json) > 1
@@ -199,7 +225,8 @@ class FeedlyUser(FeedlyData):
 
         return self._enterprise_tags
 
-    def _get_category_or_tag(self, stream_id:StreamIdBase, cache:Dict[str,Streamable], factory:Callable[[Dict[str,str]], Streamable], auto_create:bool):
+    def _get_category_or_tag(self, stream_id: StreamIdBase, cache: Dict[str, Streamable],
+                             factory: Callable[[Dict[str, str]], Streamable], auto_create: bool):
         if cache:
             data = cache.get(stream_id.content_id)
             if data:
@@ -212,7 +239,7 @@ class FeedlyUser(FeedlyData):
 
         return factory({'id': stream_id.id}, self._client)
 
-    def get_category(self, key:Union[str, UserStreamId]):
+    def get_category(self, key: Union[str, UserStreamId]):
         """
         :param key: the id of the category (e.g. "recipes"), or stream ID object
         :return: the category
@@ -224,7 +251,7 @@ class FeedlyUser(FeedlyData):
 
         return self._get_category_or_tag(id_, self._categories, UserCategory, False)
 
-    def get_tag(self, key:Union[str, UserStreamId]) -> 'UserTag':
+    def get_tag(self, key: Union[str, UserStreamId]) -> 'UserTag':
         """
         :param key: the id of the tag (e.g. "recipes"), or stream ID object
         :return: the category
@@ -236,7 +263,7 @@ class FeedlyUser(FeedlyData):
 
         return self._get_category_or_tag(id_, self._tags, UserTag, True)
 
-    def get_enterprise_category(self, key:Union[str, EnterpriseStreamId]) -> 'EnterpriseCategory':
+    def get_enterprise_category(self, key: Union[str, EnterpriseStreamId]) -> 'EnterpriseCategory':
         """
         :param key: the UUID of the category (dash separated hex numbers), or a stream ID object)
         :return: the category
@@ -248,7 +275,7 @@ class FeedlyUser(FeedlyData):
 
         return self._get_category_or_tag(id_, self._enterprise_categories, EnterpriseCategory, False)
 
-    def get_enterprise_tag(self, key:Union[str, EnterpriseStreamId]) -> 'EnterpriseTag':
+    def get_enterprise_tag(self, key: Union[str, EnterpriseStreamId]) -> 'EnterpriseTag':
         """
         :param key: the UUID of the tag (dash separated hex numbers), or a stream ID object)
         :return: the category
