@@ -71,13 +71,6 @@ class Streamable(FeedlyData):
     def __repr__(self):
         return f'<{type(self).__name__}: {self._get_id()}>'
 
-    def remove_annotations(self, user, options: StreamOptions = None):  # TODO FeedlyUser
-        for a in self.stream_contents(options):
-            if 'annotations' in a.json:
-                for annotation in a.json['annotations']:
-                    if user['id'] == annotation['author']:
-                        self._client.do_api_request(f"v3/annotations/{quote_plus(annotation['id'])}", method='DELETE')
-
 
 class TagBase(Streamable):
 
@@ -88,30 +81,8 @@ class TagBase(Streamable):
         self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put',
                                     data={'entryIds': [entry_id for entry_id in entry_ids]})
 
-    def empty(self, only_self=True):
-        self._client.do_api_request(
-            f'/v3/tags/{quote_plus(self["id"])}/'
-            f'{",".join([quote_plus(a.json["id"]) for a in self.stream_contents()])}', method='DELETE')
 
-
-class CategoryBase(Streamable):
-    def remove_tags(self, user):  # TODO add :FeedlyUser ?
-        for a in self.stream_contents():
-            if 'tags' in a.json:
-                for t in a['tags']:
-                    if t['label'] == '':
-                        continue
-                    tag_id = t['id']
-                    if tag_id.startswith('enterprise'):
-                        tagged_by_user = t.get('addedBy')
-                    else:
-                        tagged_by_user = tag_id[5:tag_id.find('/', 5)]
-                    if tagged_by_user == user['id']:
-                        self._client.do_api_request(
-                            f'/v3/tags/{quote_plus(tag_id)}/{quote_plus(a["id"])}', method='DELETE')
-
-
-class UserCategory(CategoryBase):
+class UserCategory(Streamable):
 
     @property
     def stream_id(self):
@@ -125,7 +96,7 @@ class UserTag(TagBase):
         return UserStreamId(self['id'], self['id'].split('/'))
 
 
-class EnterpriseCategory(CategoryBase):
+class EnterpriseCategory(Streamable):
 
     @property
     def stream_id(self):
@@ -287,7 +258,29 @@ class FeedlyUser(FeedlyData):
 
         return self._get_category_or_tag(id_, self._enterprise_tags, EnterpriseTag, False)
 
-    def comment(self, entry_id: str, comment: str, slackMentions=[], emailMentions=[]):
+    def remove_annotations(self, streamable: Streamable, options: StreamOptions = None):
+        for a in streamable.stream_contents(options):
+            if 'annotations' in a.json:
+                for annotation in a.json['annotations']:
+                    if self['id'] == annotation['author']:
+                        self._client.do_api_request(f"v3/annotations/{quote_plus(annotation['id'])}", method='DELETE')
+
+    def remove_tags(self, streamable: Streamable, options: StreamOptions = None):
+        for a in streamable.stream_contents(options):
+            if 'tags' in a.json:
+                for t in a['tags']:
+                    if t['label'] == '':
+                        continue
+                    tag_id = t['id']
+                    if tag_id.startswith('enterprise'):
+                        tagged_by_user = t.get('addedBy')
+                    else:
+                        tagged_by_user = tag_id[5:tag_id.find('/', 5)]
+                    if tagged_by_user == self['id']:
+                        self._client.do_api_request(
+                            f'/v3/tags/{quote_plus(tag_id)}/{quote_plus(a["id"])}', method='DELETE')
+
+    def annotate_entry(self, entry_id: str, comment: str, slackMentions=[], emailMentions=[]):
         self._client.do_api_request(f'/v3/annotations', method='post',
                                     data={'comment': comment, 'entryId': entry_id, 'emailMentions': emailMentions,
                                           'slackMentions': slackMentions})
