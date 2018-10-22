@@ -266,6 +266,7 @@ class FeedlyUser(FeedlyData):
                         self._client.do_api_request(f"v3/annotations/{quote_plus(annotation['id'])}", method='DELETE')
 
     def remove_tags(self, streamable: Streamable, options: StreamOptions = None):
+        a_ids = []
         for a in streamable.stream_contents(options):
             if 'tags' in a.json:
                 for t in a['tags']:
@@ -277,8 +278,13 @@ class FeedlyUser(FeedlyData):
                     else:
                         tagged_by_user = tag_id[5:tag_id.find('/', 5)]
                     if tagged_by_user == self['id']:
-                        self._client.do_api_request(
-                            f'/v3/tags/{quote_plus(tag_id)}/{quote_plus(a["id"])}', method='DELETE')
+                        a_ids += [a["id"]]
+        while len(a_ids)>0:
+            print(len(a_ids))
+            to_delete = a_ids[:10]
+            a_ids=a_ids[10:]
+            self._client.do_api_request(
+                f'/v3/tags/{quote_plus(tag_id)}/{",".join([quote_plus(d) for d in to_delete])}', method='DELETE')
 
     def annotate_entry(self, entry_id: str, comment: str, slackMentions=[], emailMentions=[]):
         self._client.do_api_request(f'/v3/annotations', method='post',
