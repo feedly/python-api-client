@@ -250,14 +250,28 @@ class FeedlyUser(FeedlyData):
 
         return self._get_category_or_tag(id_, self._enterprise_tags, EnterpriseTag, False)
 
-    def remove_annotations(self, streamable: Streamable, options: StreamOptions = None):
+    def delete_annotations(self, streamable: Streamable, options: StreamOptions = None):
+        '''
+        *** WARNING *** Non-reversible operation
+        Given a streamable, remove all annotations made by the user (identified with self['id'])
+        :param streamable:
+        :param options:
+        :return:
+        '''
         for a in streamable.stream_contents(options):
             if 'annotations' in a.json:
                 for annotation in a.json['annotations']:
                     if self['id'] == annotation['author']:
                         self._client.do_api_request(f"v3/annotations/{quote_plus(annotation['id'])}", method='DELETE')
 
-    def remove_tags(self, streamable: Streamable, options: StreamOptions = None):
+    def delete_tags(self, streamable: Streamable, options: StreamOptions = None):
+        '''
+        *** WARNING *** Non-reversible operation
+        Given a streamable, remove all tags made by the user (identified with self['id'])
+        :param streamable:
+        :param options:
+        :return:
+        '''
         a_ids = []
         for a in streamable.stream_contents(options):
             if 'tags' in a.json:
