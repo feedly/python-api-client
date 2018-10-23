@@ -3,7 +3,7 @@
    handy getter methods, but otherwise you can just use a .json property to access the
    raw json passed back by the client.
 """
-from typing import Any, Dict, Optional, Callable, Union
+from typing import Any, Dict, Optional, Callable, Union, List
 from urllib.parse import quote_plus
 
 from feedly.protocol import APIClient
@@ -71,6 +71,11 @@ class TagBase(Streamable):
 
     def tag_entry(self, entry_id:str):
         self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put', data={'entryId': entry_id})
+
+    def tag_entries(self, entry_ids: List[str]):
+        self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put',
+                                    data={'entryIds': [entry_id for entry_id in entry_ids]})
+
 
 class UserCategory(Streamable):
 
@@ -245,5 +250,49 @@ class FeedlyUser(FeedlyData):
 
         return self._get_category_or_tag(id_, self._enterprise_tags, EnterpriseTag, False)
 
+    def delete_annotations(self, streamable: Streamable, options: StreamOptions = None):
+        '''
+        *** WARNING *** Non-reversible operation
+        Given a streamable, remove all annotations made by the user (identified with self['id'])
+        :param streamable:
+        :param options:
+        :return:
+        '''
+        for a in streamable.stream_contents(options):
+            if 'annotations' in a.json:
+                for annotation in a.json['annotations']:
+                    if self['id'] == annotation['author']:
+                        self._client.do_api_request(f"v3/annotations/{quote_plus(annotation['id'])}", method='DELETE')
 
+    def delete_tags(self, streamable: Streamable, options: StreamOptions = None):
+        '''
+        *** WARNING *** Non-reversible operation
+        Given a streamable, remove all tags made by the user (identified with self['id'])
+        :param streamable:
+        :param options:
+        :return:
+        '''
+        a_ids = []
+        for a in streamable.stream_contents(options):
+            if 'tags' in a.json:
+                for t in a['tags']:
+                    if t['label'] == '':
+                        continue
+                    tag_id = t['id']
+                    if tag_id.startswith('enterprise'):
+                        tagged_by_user = t.get('addedBy')
+                    else:
+                        tagged_by_user = tag_id[5:tag_id.find('/', 5)]
+                    if tagged_by_user == self['id']:
+                        a_ids += [a["id"]]
+        while len(a_ids)>0:
+            print(len(a_ids))
+            to_delete = a_ids[:10]
+            a_ids=a_ids[10:]
+            self._client.do_api_request(
+                f'/v3/tags/{quote_plus(tag_id)}/{",".join([quote_plus(d) for d in to_delete])}', method='DELETE')
 
+    def annotate_entry(self, entry_id: str, comment: str, slackMentions=[], emailMentions=[]):
+        self._client.do_api_request(f'/v3/annotations', method='post',
+                                    data={'comment': comment, 'entryId': entry_id, 'emailMentions': emailMentions,
+                                          'slackMentions': slackMentions})
