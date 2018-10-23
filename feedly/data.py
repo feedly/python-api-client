@@ -3,7 +3,7 @@
    handy getter methods, but otherwise you can just use a .json property to access the
    raw json passed back by the client.
 """
-from typing import Any, Dict, Optional, Callable, Union
+from typing import Any, Dict, Optional, Callable, Union, List
 from urllib.parse import quote_plus
 
 from feedly.protocol import APIClient
