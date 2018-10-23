@@ -166,7 +166,7 @@ class FeedlyUser(FeedlyData):
         if self._enterprise_categories is None or refresh:
             self._enterprise_categories = self._get_categories_or_tags('/v3/enterprise/collections', EnterpriseCategory)
             if self._enterprise_categories:
-                self.json['enterpriseName'] = next(iter(self._enterprise_categories.values())).stream_id.source
+                self.json['enterpriseName'] = next(iter(self._enterprise_categories.values())).stream_id.source_id
 
         return self._enterprise_categories
 
