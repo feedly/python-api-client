@@ -147,7 +147,7 @@ class FeedlySession(APIClient):
         if not relative_url.startswith('/v3/'):
             raise ValueError(f'invalid endpoint {relative_url} -- must start with /v3/ See https://developers.feedly.com')
 
-        if 10 < max_tries < 0:
+        if max_tries < 1 or max_tries > 10:
             raise ValueError('invalid max tries')
 
         full_url = f'{self.api_host}{relative_url}'
