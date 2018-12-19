@@ -47,7 +47,7 @@ class StreamIdBase:
         elif id_.startswith(STREAM_SOURCE_ENTERPRISE):
             return EnterpriseStreamId(id_)
         else:
-            return StreamIdBase(id_, STREAM_SOURCE_UNKNOWN, 'unknown', 'unknown')
+            return StreamIdBase(id_, STREAM_SOURCE_UNKNOWN, 'unknown', 'unknown', 'unknown')
 
     def __repr__(self):
         return f'<stream:{self.id}>'
@@ -70,7 +70,7 @@ class UserStreamId(StreamIdBase):
             parts = id_.split('/')
 
         if not id_.startswith(STREAM_SOURCE_USER):
-            raise ValueError('not a user stream: ' + id)
+            raise ValueError('not a user stream: ' + id_)
 
         super().__init__(id_, STREAM_SOURCE_USER, parts[1], parts[2], '/'.join(parts[3:]))
 
@@ -96,7 +96,7 @@ class EnterpriseStreamId(StreamIdBase):
             parts = id_.split('/')
 
         if not id_.startswith(STREAM_SOURCE_ENTERPRISE):
-            raise ValueError('not an enterprise stream: ' + id)
+            raise ValueError('not an enterprise stream: ' + id_)
 
         super().__init__(id_, STREAM_SOURCE_ENTERPRISE, parts[1], parts[2], parts[3])
 
