@@ -148,7 +148,7 @@ class StreamBase:
 
         while n < self.options._max_count and (self.continuation is not None or self.buffer):
             while self.buffer:
-                i = self.buffer.pop()
+                i = self.buffer.pop(0)
                 yield self._item_factory(i)
                 n += 1
                 if n == self.options._max_count:
