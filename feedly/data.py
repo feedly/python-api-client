@@ -103,6 +103,21 @@ class EnterpriseTag(TagBase):
     def stream_id(self):
         return EnterpriseStreamId(self['id'], self['id'].split('/'))
 
+    def archive(self):
+        """
+        Once archived, a tag will not be returned in the list of enterprise tags.
+        It will not be returned in the list of tag subscriptions.
+        """
+        self._client.do_api_request('v3/enterprise/tags/'+quote_plus(self.stream_id.id), method='delete')
+
+    def delete(self):
+        """
+        *** WARNING *** Non-reversible operation
+        The tag will be permanently deleted:
+        All tagged articles will be untagged, and the tag subscription will be removed from all members subscriptions.
+        """
+        self._client.do_api_request('v3/enterprise/tags/'+quote_plus(self.stream_id.id)+'?deleteContent=true', method='delete')
+
 class Entry(FeedlyData):
     pass
 
@@ -249,6 +264,15 @@ class FeedlyUser(FeedlyData):
             id_ = key
 
         return self._get_category_or_tag(id_, self._enterprise_tags, EnterpriseTag, False)
+
+    def create_enterprise_tag(self, data: Dict[str, Any]) -> 'EnterpriseTag':
+        """
+        :param data: The dictionary with the info for the new tag creation.
+        :return: the newly created enterprise tag
+        """
+        assert "emailSettings" not in data or data["emailSettings"].get("includeFollowers")
+        items = self._client.do_api_request('v3/enterprise/tags', method="post", data=data)
+        return EnterpriseTag(items[0], self._client)
 
     def delete_annotations(self, streamable: Streamable, options: StreamOptions = None):
         '''
