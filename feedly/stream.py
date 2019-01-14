@@ -1,3 +1,4 @@
+from collections import deque
 from typing import List
 from urllib.parse import quote_plus
 
@@ -148,7 +149,7 @@ class StreamBase:
 
         while n < self.options._max_count and (self.continuation is not None or self.buffer):
             while self.buffer:
-                i = self.buffer.pop(0)
+                i = self.buffer.popleft()
                 yield self._item_factory(i)
                 n += 1
                 if n == self.options._max_count:
@@ -160,5 +161,5 @@ class StreamBase:
                 resp = self._client.do_api_request(curl)
                 self.continuation = resp.get('continuation')
                 if resp and self._items_prop in resp:
-                    self.buffer = resp[self._items_prop]
+                    self.buffer = deque(resp[self._items_prop])
                     logging.debug('%d items (continuation=%s)', len(self.buffer), self.continuation)
