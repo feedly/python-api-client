@@ -232,7 +232,7 @@ class FeedlyUser(FeedlyData):
     def get_tag(self, key:Union[str, UserStreamId]) -> 'UserTag':
         """
         :param key: the id of the tag (e.g. "recipes"), or stream ID object
-        :return: the category
+        :return: the tag
         """
         if isinstance(key, str):
             id_ = UserStreamId(parts=[STREAM_SOURCE_USER, self.id, 'tag', key])
@@ -244,7 +244,7 @@ class FeedlyUser(FeedlyData):
     def get_enterprise_category(self, key:Union[str, EnterpriseStreamId]) -> 'EnterpriseCategory':
         """
         :param key: the UUID of the category (dash separated hex numbers), or a stream ID object)
-        :return: the category
+        :return: the enterprise category
         """
         if isinstance(key, str):
             id_ = EnterpriseStreamId(parts=[STREAM_SOURCE_ENTERPRISE, self.enterprise_name, 'category', key])
@@ -256,7 +256,7 @@ class FeedlyUser(FeedlyData):
     def get_enterprise_tag(self, key:Union[str, EnterpriseStreamId]) -> 'EnterpriseTag':
         """
         :param key: the UUID of the tag (dash separated hex numbers), or a stream ID object)
-        :return: the category
+        :return: the enterprise tag
         """
         if isinstance(key, str):
             id_ = EnterpriseStreamId(parts=[STREAM_SOURCE_ENTERPRISE, self.enterprise_name, 'tag', key])
@@ -275,13 +275,13 @@ class FeedlyUser(FeedlyData):
         return EnterpriseTag(items[0], self._client)
 
     def delete_annotations(self, streamable: Streamable, options: StreamOptions = None):
-        '''
+        """
         *** WARNING *** Non-reversible operation
         Given a streamable, remove all annotations made by the user (identified with self['id'])
         :param streamable:
         :param options:
         :return:
-        '''
+        """
         for a in streamable.stream_contents(options):
             if 'annotations' in a.json:
                 for annotation in a.json['annotations']:
@@ -289,13 +289,13 @@ class FeedlyUser(FeedlyData):
                         self._client.do_api_request(f"v3/annotations/{quote_plus(annotation['id'])}", method='DELETE')
 
     def delete_tags(self, streamable: Streamable, options: StreamOptions = None):
-        '''
+        """
         *** WARNING *** Non-reversible operation
         Given a streamable, remove all tags made by the user (identified with self['id'])
         :param streamable:
         :param options:
         :return:
-        '''
+        """
         a_ids = []
         for a in streamable.stream_contents(options):
             if 'tags' in a.json:
@@ -310,9 +310,9 @@ class FeedlyUser(FeedlyData):
                     if tagged_by_user == self['id']:
                         a_ids += [a["id"]]
         while len(a_ids)>0:
-            print(len(a_ids))
-            to_delete = a_ids[:10]
-            a_ids=a_ids[10:]
+            batch_size = 10  # limitation due to the url length: articles are "de-tagged" by batch of 10.
+            to_delete = a_ids[:batch_size]
+            a_ids = a_ids[batch_size:]
             self._client.do_api_request(
                 f'/v3/tags/{quote_plus(tag_id)}/{",".join([quote_plus(d) for d in to_delete])}', method='DELETE')
 
