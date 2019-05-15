@@ -214,14 +214,3 @@ class FeedlySession(APIClient):
                 raise ServerAPIError(e)
 
             raise e
-
-if __name__ == '__main__':
-        logging.basicConfig(level='DEBUG')
-        # token = (Path.home() / 'access.token').read_text().strip()
-        auth = FileAuthStore(Path.home())
-        # print(sess.user['fullName'])
-
-        sess = FeedlySession(auth)
-
-        for k, v in sess.user.get_categories().items():
-            pprint(f"{k} -- {v['label']}")
