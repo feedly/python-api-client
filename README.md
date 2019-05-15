@@ -16,7 +16,7 @@ initalize the client as follows:
 
 ```
 from pathlib import Path
-from feedly.session import FeedlySession
+from feedly.api_client.session import FeedlySession
 
 token = (Path.home() / 'access.token').read_text().strip()
 sess = FeedlySession(token)
@@ -117,4 +117,4 @@ To debug things, set the log level to `DEBUG`. This will print log messages on e
 The above examples assume the auth (access) token is valid. However these tokens do expire. Instead 
 of passing the auth token itself, you can create a `feedly.session.Auth` implementation to refresh
 the auth token. A file based implementation is already provided (`FileAuthStore`). Once this is done
-the client will automatically try to refresh the auth token if a `401` response is encountered.  
+the client will automatically try to refresh the auth token if a `401` response is encountered.
