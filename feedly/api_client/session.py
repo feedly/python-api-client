@@ -1,21 +1,17 @@
-from pprint import pprint
+import datetime
+import logging
 import time
 from pathlib import Path
-from typing import Dict, Any, Union, List, Optional
-
-import logging
-
-import datetime
+from pprint import pprint
+from typing import Any, Dict, List, Union
 from urllib.parse import quote_plus
 
+from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError
 
-from requests import Session
-
-from feedly.data import FeedlyUser
-from feedly.protocol import RateLimitedAPIError, BadRequestAPIError, UnauthorizedAPIError, ServerAPIError, APIClient, WrappedHTTPError
-from feedly.stream import StreamIdBase
+from feedly.api_client.data import FeedlyUser
+from feedly.api_client.protocol import APIClient, BadRequestAPIError, RateLimitedAPIError, ServerAPIError, UnauthorizedAPIError
 
 
 class Auth:
@@ -218,14 +214,3 @@ class FeedlySession(APIClient):
                 raise ServerAPIError(e)
 
             raise e
-
-if __name__ == '__main__':
-        logging.basicConfig(level='DEBUG')
-        # token = (Path.home() / 'access.token').read_text().strip()
-        auth = FileAuthStore(Path.home())
-        # print(sess.user['fullName'])
-
-        sess = FeedlySession(auth)
-
-        for k, v in sess.user.get_categories().items():
-            pprint(f"{k} -- {v['label']}")

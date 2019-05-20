@@ -18,7 +18,7 @@ URL = 'https://github.com/feedly/python-api-client'
 EMAIL = 'kireet@feedly.com'
 AUTHOR = 'Kireet'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = 0.19
+VERSION = '0.20'
 
 # What packages are required for this module to be executed?
 with open('requirements.txt') as f:
@@ -87,7 +87,7 @@ class UploadCommand(Command):
         self.status('Pushing git tags…')
         os.system('git tag v{0}'.format(about['__version__']))
         os.system('git push --tags')
-        
+
         sys.exit()
 
 
@@ -102,7 +102,7 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_packages(exclude=('tests',)),
+    packages=['feedly.api_client'],
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 

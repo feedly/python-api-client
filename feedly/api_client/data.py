@@ -3,12 +3,12 @@
    handy getter methods, but otherwise you can just use a .json property to access the
    raw json passed back by the client.
 """
-from typing import Any, Dict, Optional, Callable, Union, List
+from typing import Any, Callable, Dict, List, Optional, Union
 from urllib.parse import quote_plus
 
-from feedly.protocol import APIClient
-from feedly.stream import STREAM_SOURCE_USER, StreamOptions, StreamBase, UserStreamId, EnterpriseStreamId, StreamIdBase, STREAM_SOURCE_ENTERPRISE
-import logging
+from feedly.api_client.protocol import APIClient
+from feedly.api_client.stream import EnterpriseStreamId, STREAM_SOURCE_ENTERPRISE, STREAM_SOURCE_USER, StreamBase, StreamIdBase, StreamOptions, UserStreamId
+
 
 class FeedlyData:
     def __init__(self, json:Dict[str,Any], client:APIClient=None):

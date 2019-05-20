@@ -1,10 +1,9 @@
+import logging
 from collections import deque
 from typing import List
 from urllib.parse import quote_plus
 
-import logging
-
-from feedly.protocol import APIClient
+from feedly.api_client.protocol import APIClient
 
 STREAM_SOURCE_USER:str = 'user'
 STREAM_SOURCE_ENTERPRISE:str = 'enterprise'
