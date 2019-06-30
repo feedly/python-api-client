@@ -34,8 +34,8 @@ class FeedlyData:
     def __setitem__(self, key, value):
         self.json[key] = value
 
-    def __iter__(self):
-        yield from self.json
+    def __contains__(self, item):
+        return item in self._json
 
 
 class IdStream(StreamBase):
