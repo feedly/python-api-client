@@ -79,15 +79,16 @@ class TagBase(Streamable):
     def delete_tags(self, options: StreamOptions = None):
         """
         *** WARNING *** Non-reversible operation
-        Given a TagBas Streamable, remove tags corresponding to this tag stream, whichever user saved it, for
-        all articles downloaded with options StreamOptions.
+        Given a TagBase Streamable, remove tags corresponding to this tag stream, for all articles downloaded
+        with options StreamOptions. If User is part of a Team, this will also delete the teammate tags that correspond
+        to this board
         :param options: specify high max_count to empty the board.
         :return:
         """
         a_ids = [a["id"] for a in self.stream_contents(options)]
         tag_id = self._get_id()
         while len(a_ids) > 0:
-            batch_size = 50  # limitation due to the url length: articles are "de-tagged" by batch of 10.
+            batch_size = 50  # limitation due to the url length: articles are "de-tagged" by batch of 50.
             to_delete = a_ids[:batch_size]
             a_ids = a_ids[batch_size:]
             self._client.do_api_request(
@@ -328,7 +329,7 @@ class FeedlyUser(FeedlyData):
                     if tagged_by_user == self['id']:
                         a_ids += [a["id"]]
         while len(a_ids)>0:
-            batch_size = 10  # limitation due to the url length: articles are "de-tagged" by batch of 10.
+            batch_size = 50  # limitation due to the url length: articles are "de-tagged" by batch of 50.
             to_delete = a_ids[:batch_size]
             a_ids = a_ids[batch_size:]
             self._client.do_api_request(
