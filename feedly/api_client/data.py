@@ -76,6 +76,24 @@ class TagBase(Streamable):
         self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put',
                                     data={'entryIds': [entry_id for entry_id in entry_ids]})
 
+    def delete_tags(self, options: StreamOptions = None):
+        """
+        *** WARNING *** Non-reversible operation
+        Given a TagBas Streamable, remove tags corresponding to this tag stream, whichever user saved it, for
+        all articles downloaded with options StreamOptions.
+        :param options: specify high max_count to empty the board.
+        :return:
+        """
+        a_ids = [a["id"] for a in self.stream_contents(options)]
+        tag_id = self._get_id()
+        while len(a_ids) > 0:
+            batch_size = 50  # limitation due to the url length: articles are "de-tagged" by batch of 10.
+            to_delete = a_ids[:batch_size]
+            a_ids = a_ids[batch_size:]
+            self._client.do_api_request(
+                f'/v3/tags/{quote_plus(tag_id)}/{",".join([quote_plus(d) for d in to_delete])}', method='DELETE'
+            )
+
 
 class UserCategory(Streamable):
 
