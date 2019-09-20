@@ -172,7 +172,7 @@ class FeedlySession(APIClient):
                 resp = None
                 conn_error = None
                 try:
-                    resp = self.session.request(method, full_url, headers=headers, timeout=timeout, json=data, verify=False)
+                    resp = self.session.request(method, full_url, headers=headers, timeout=timeout, json=data)
                 except OSError as e:
                     conn_error = e
 
