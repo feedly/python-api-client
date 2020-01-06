@@ -76,6 +76,17 @@ class TagBase(Streamable):
         self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put',
                                     data={'entryIds': [entry_id for entry_id in entry_ids]})
 
+    def untag_entry(self, entry_id: str):
+        self.untag_entries([entry_id])
+
+    def untag_entries(self, entry_ids: List[str]):
+        # limitation due to the url length: articles are "de-tagged" by batch of 50.
+        for i in range(0, len(entry_ids), 50):
+            self._client.do_api_request(
+                f'/v3/tags/{quote_plus(self["id"])}/{",".join([quote_plus(d) for d in entry_ids[i: i+50]])}',
+                method='DELETE',
+            )
+
     def delete_tags(self, options: StreamOptions = None):
         """
         *** WARNING *** Non-reversible operation
@@ -86,14 +97,7 @@ class TagBase(Streamable):
         :return:
         """
         a_ids = [a["id"] for a in self.stream_contents(options)]
-        tag_id = self._get_id()
-        while len(a_ids) > 0:
-            batch_size = 50  # limitation due to the url length: articles are "de-tagged" by batch of 50.
-            to_delete = a_ids[:batch_size]
-            a_ids = a_ids[batch_size:]
-            self._client.do_api_request(
-                f'/v3/tags/{quote_plus(tag_id)}/{",".join([quote_plus(d) for d in to_delete])}', method='DELETE'
-            )
+        self.untag_entries(a_ids)
 
 
 class UserCategory(Streamable):
