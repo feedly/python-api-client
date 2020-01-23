@@ -3,11 +3,13 @@
    handy getter methods, but otherwise you can just use a .json property to access the
    raw json passed back by the client.
 """
+import warnings
 from typing import Any, Callable, Dict, List, Optional, Union
 from urllib.parse import quote_plus
 
 from feedly.api_client.protocol import APIClient
-from feedly.api_client.stream import EnterpriseStreamId, STREAM_SOURCE_ENTERPRISE, STREAM_SOURCE_USER, StreamBase, StreamIdBase, StreamOptions, UserStreamId
+from feedly.api_client.stream import EnterpriseStreamId, STREAM_SOURCE_ENTERPRISE, STREAM_SOURCE_USER, StreamBase, \
+    StreamIdBase, StreamOptions, UserStreamId
 
 
 class FeedlyData:
@@ -80,14 +82,14 @@ class TagBase(Streamable):
         self.untag_entries([entry_id])
 
     def untag_entries(self, entry_ids: List[str]):
-        # limitation due to the url length: articles are "de-tagged" by batch of 50.
+        # limitation due to the url length: articles are untagged by batch of 50.
         for i in range(0, len(entry_ids), 50):
             self._client.do_api_request(
                 f'/v3/tags/{quote_plus(self["id"])}/{",".join([quote_plus(d) for d in entry_ids[i: i+50]])}',
                 method='DELETE',
             )
 
-    def delete_tags(self, options: StreamOptions = None):
+    def untag_all(self, options: StreamOptions = None):
         """
         *** WARNING *** Non-reversible operation
         Given a TagBase Streamable, remove tags corresponding to this tag stream, for all articles downloaded
@@ -98,6 +100,10 @@ class TagBase(Streamable):
         """
         a_ids = [a["id"] for a in self.stream_contents(options)]
         self.untag_entries(a_ids)
+
+    def delete_tags(self, options: StreamOptions = None):
+        warnings.warn('The delete_tags function is deprecated. Use the untag_all function instead')
+        return self.untag_all(options)
 
 
 class UserCategory(Streamable):

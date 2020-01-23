@@ -2,7 +2,6 @@ import datetime
 import logging
 import time
 from pathlib import Path
-from pprint import pprint
 from typing import Any, Dict, List, Union
 from urllib.parse import quote_plus
 
@@ -11,7 +10,8 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError
 
 from feedly.api_client.data import FeedlyUser
-from feedly.api_client.protocol import APIClient, BadRequestAPIError, RateLimitedAPIError, ServerAPIError, UnauthorizedAPIError
+from feedly.api_client.protocol import APIClient, BadRequestAPIError, RateLimitedAPIError, ServerAPIError, \
+    UnauthorizedAPIError
 
 
 class Auth:
