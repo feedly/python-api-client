@@ -3,11 +3,17 @@
    handy getter methods, but otherwise you can just use a .json property to access the
    raw json passed back by the client.
 """
-from typing import Any, Callable, Dict, List, Optional, Union
+import logging
+from typing import Any, Callable, Dict, List, Optional, Union, Set
 from urllib.parse import quote_plus
 
+from requests import HTTPError, Response
+
 from feedly.api_client.protocol import APIClient
-from feedly.api_client.stream import EnterpriseStreamId, STREAM_SOURCE_ENTERPRISE, STREAM_SOURCE_USER, StreamBase, StreamIdBase, StreamOptions, UserStreamId
+from feedly.api_client.stream import EnterpriseStreamId, STREAM_SOURCE_ENTERPRISE, STREAM_SOURCE_USER, StreamBase, \
+    StreamIdBase, StreamOptions, UserStreamId
+
+logger = logging.getLogger(__name__)
 
 
 class FeedlyData:
@@ -72,9 +78,25 @@ class TagBase(Streamable):
     def tag_entry(self, entry_id:str):
         self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put', data={'entryId': entry_id})
 
-    def tag_entries(self, entry_ids: List[str]):
-        self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put',
-                                    data={'entryIds': [entry_id for entry_id in entry_ids]})
+    def tag_entries(self, entry_ids: List[str], errors_to_ignore: Set[int] = None):
+        """
+        Tag the given entries.
+        Will ignore given error_codes (default is only ignore 409, that happens when a duplicate is already tagged)
+        """
+        if errors_to_ignore is None:
+            errors_to_ignore = {409}
+        for i in range(0, len(entry_ids), 50):
+            self._tag_entries_batch(entry_ids[i: i + 50], errors_to_ignore)
+
+    def _tag_entries_batch(self, entry_ids: List[str], errors_to_ignore: Set[int]):
+        try:
+            self._client.do_api_request(f'/v3/tags/{quote_plus(self["id"])}', method='put', data={'entryIds': entry_ids})
+        except HTTPError as e:
+            resp: Response = e.response
+            if resp.status_code in errors_to_ignore:
+                logger.warning(f"Ignored error {resp.status_code} from API: {resp.text}")
+            else:
+                raise e
 
     def delete_tags(self, options: StreamOptions = None):
         """
