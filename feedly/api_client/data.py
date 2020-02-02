@@ -16,6 +16,7 @@ class FeedlyData:
     def __init__(self, json:Dict[str,Any], client:APIClient=None):
         self._json = json
         self._client = client
+
     def _onchange(self):
         # sub classes should clear any cached items here
         pass
@@ -35,6 +36,10 @@ class FeedlyData:
     def __setitem__(self, key, value):
         self.json[key] = value
 
+    def __contains__(self, item):
+        return item in self._json
+
+
 class IdStream(StreamBase):
     """
     stream entry ids, e.g. https://developers.feedly.com/v3/streams/#get-a-list-of-entry-ids-for-a-specific-stream
@@ -49,7 +54,6 @@ class ContentStream(StreamBase):
     """
     def __init__(self, client:APIClient, id_:str, options:StreamOptions):
         super().__init__(client, id_, options, 'contents', 'items', Entry)
-
 
 
 class Streamable(FeedlyData):
@@ -68,6 +72,7 @@ class Streamable(FeedlyData):
 
     def __repr__(self):
         return f'<{type(self).__name__}: {self._get_id()}>'
+
 
 class TagBase(Streamable):
 
@@ -119,6 +124,7 @@ class UserTag(TagBase):
     def stream_id(self):
         return UserStreamId(self['id'], self['id'].split('/'))
 
+
 class EnterpriseCategory(Streamable):
 
     @property
@@ -146,6 +152,7 @@ class EnterpriseTag(TagBase):
         All tagged articles will be untagged, and the tag subscription will be removed from all members subscriptions.
         """
         self._client.do_api_request('v3/enterprise/tags/'+quote_plus(self.stream_id.id)+'?deleteContent=true', method='delete')
+
 
 class Entry(FeedlyData):
     pass
