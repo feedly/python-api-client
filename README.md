@@ -26,6 +26,10 @@ or you can create a new one when needed. It's a bit more efficient to keep it ar
 do choose to create clients as needed, you should pass in the user's ID in the constructor, 
 otherwise you'll incur a `/v3/profile` request. 
 
+## Examples setup
+
+To run [the examples](feedly/examples), you need first need to create a file containing you token in [feedly/examples/auth/access.token](feedly/examples/auth/access.token). You can also put your refresh token in [feedly/examples/auth/refresh.token](feedly/examples/auth/refresh.token).
+
 ## API Oriented Usage
 You can use the `FeedlySession` object to make arbitrary API requests. E.g.:
 
@@ -40,6 +44,7 @@ sess.do_api_request('/v3/feeds/feed%2Fhttp%3A%2F%2Fblog.feedly.com%2Ffeed%2F')
   ...
 }
 ```
+
 
 ## Object Oriented Usage
 

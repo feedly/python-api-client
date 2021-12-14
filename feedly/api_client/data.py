@@ -225,7 +225,7 @@ class LazyStreams(Generic[StreamableT]):
         return self.id2stream[id]
 
     def make_stream_from_id(self, uuid: str) -> StreamableT:
-        return self.factory({"id": "/".join(self.parts + [uuid])})
+        return self.factory({"id": "/".join(self.parts + [uuid])}, self.client)
 
 
 class FeedlyUser(FeedlyData):
