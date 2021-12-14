@@ -29,11 +29,10 @@ otherwise you'll incur a `/v3/profile` request.
 ## API Oriented Usage
 You can use the `FeedlySession` object to make arbitrary API requests. E.g.:
 
-```
+```python
 sess.do_api_request('/v3/feeds/feed%2Fhttp%3A%2F%2Fblog.feedly.com%2Ffeed%2F')
-
-------------------
-
+```
+```json
 {
   "id": "feed/http://blog.feedly.com/feed/",
   "feedId": "feed/http://blog.feedly.com/feed/",
@@ -44,43 +43,50 @@ sess.do_api_request('/v3/feeds/feed%2Fhttp%3A%2F%2Fblog.feedly.com%2Ffeed%2F')
 
 ## Object Oriented Usage
 
-#### Retrieving Articles
-Alternatively, you can use the object oriented code, which facilitates common usage patterns.
+#### Retrieving Streams
+Alternatively, you can use the object-oriented code, which facilitates common usage patterns.
 E.g. you can list your user categories:
 ```
-sess.user.get_categories()
+sess.user.user_categories.name2stream
+```
 
-------------------
-
-{'comics': <UserCategory: user/xxx/category/comics>,
- 'econ': <UserCategory: user/xxx/category/econ>,
- 'global.must': <UserCategory: user/xxx/category/global.must>,
- 'politics': <UserCategory: user/xxx/category/politics>,
+```json
+{'comics': <UserCategory: user/xxx/category/aaa>,
+ 'econ': <UserCategory: user/xxx/category/bbb>,
+ 'global.must': <UserCategory: user/xxx/category/ccc>,
+ 'politics': <UserCategory: user/xxx/category/ddd>,
 }
 ```
 where `xxx` is your actual user ID.
 
 It's not necessary to list categories beforehand, if you know the ones that exist, you can 
-get one on the fly:
+get one on the fly, by querying it by id or name:
+```python
+sess.user.user_categories.get('comics')  # From the category name
+sess.user.user_categories.get('xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx')  # From the category id
 ```
-sess.user.get_category('comics'))
-
-------------------
-
+```
 <UserCategory: user/xxx/category/comics>
 ```
+
+You can access:
+ - User categories with `sess.user.user_categories`
+ - User tags with `sess.user.user_tags`
+ - Enterprise categories with `sess.user.enterprise_categories`
+ - User categories with `sess.user.enterprise_tags`
+
 
 #### Accessing Entries (articles)
 If you need to access entries or entry IDs, you can use easily stream them via `stream_contents`
 and `stream_ids`, respectively:
 
-```
+```python
 with FeedlySession(auth_token=token) as sess:
-    for eid in sess.user.get_category('politics').stream_ids():
+    for eid in sess.user.user_categories.get('politics').stream_ids():
          print(eid)
 
-------------------
-
+```
+```
 Dz51gkBgvGUvFOfTATCYLB2uqVaBIaGGazzxpZh2WL0=_16549c827dd:1645ba:3da9d93
 Dz51gkBgvGUvFOfTATCYLB2uqVaBIaGGazzxpZh2WL0=_16549c827dd:1645bb:3da9d93
 Z/Hzx8NYfSSE8sweA2v5+4r5h7HC5ALdE2YGYB8MYbQ=_1654a26f3fe:79d9ef9:6f86c10b
@@ -91,7 +97,7 @@ Take note of the `StreamOptions` class. There are important `max_count` and `cou
 properties that control streaming. To download all items, something like this could
 be done:
 
-```
+```python
 opts = StreamOptions(max_count=sys.maxsize) # down all items that exist
 opts.count = sys.maxsize # download as many items as possible in every API request
 with FeedlySession(auth_token=token) as sess:
@@ -101,7 +107,7 @@ with FeedlySession(auth_token=token) as sess:
 ```
 
 #### Tagging Existing Entries
-```
+```python
 with FeedlySession(auth_token=token) as sess:
     sess.user.get_tag('politics').tag_entry(eid)
 ```

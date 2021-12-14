@@ -3,15 +3,19 @@
    handy getter methods, but otherwise you can just use a .json property to access the
    raw json passed back by the client.
 """
+import re
 import warnings
-from typing import Any, Callable, Dict, List, Optional, Union
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Union
 from urllib.parse import quote_plus
+
+from backports.cached_property import cached_property
 
 from feedly.api_client.protocol import APIClient
 from feedly.api_client.stream import (
-    EnterpriseStreamId,
     STREAM_SOURCE_ENTERPRISE,
     STREAM_SOURCE_USER,
+    EnterpriseStreamId,
     StreamBase,
     StreamIdBase,
     StreamOptions,
@@ -62,11 +66,20 @@ class ContentStream(StreamBase):
         super().__init__(client, id_, options, "contents", "items", Entry)
 
 
-class Streamable(FeedlyData):
+class Streamable(FeedlyData, ABC):
+    @property
+    def id(self) -> str:
+        return self._get_id()
+
+    @property
+    @abstractmethod
+    def stream_id(self):
+        ...
+
     def _get_id(self):
         return self["id"]
 
-    def stream_contents(self, options: StreamOptions = None):
+    def stream_contents(self, options: StreamOptions = None) -> ContentStream:
         if not options:
             options = StreamOptions()
         return ContentStream(self._client, self._get_id(), options)
@@ -162,13 +175,62 @@ class Entry(FeedlyData):
     pass
 
 
+StreamableT = TypeVar("StreamableT", bound=Streamable)
+
+UUID_REGEX = re.compile(r"[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}", re.IGNORECASE)
+
+
+class LazyStreams(Generic[StreamableT]):
+    def __init__(
+        self, parts: List[str], endpoint: str, factory: Callable[[Dict, APIClient], StreamableT], client: APIClient
+    ):
+        self.parts = parts
+        self.client = client
+        self.endpoint = endpoint
+        self.factory = factory
+
+        self.populated = False
+
+    @cached_property
+    def streams(self) -> List[StreamableT]:
+        self.populated = True
+        return [self.factory(item, self.client) for item in self.client.do_api_request(self.endpoint)]
+
+    @cached_property
+    def id2stream(self) -> Dict[str, StreamableT]:
+        return {stream.stream_id.content_id: stream for stream in self.streams}
+
+    @cached_property
+    def name2stream(self) -> Dict[str, StreamableT]:
+        return {stream["label"]: stream for stream in self.streams}
+
+    def get(self, name_or_id: Union[str, StreamIdBase]) -> StreamableT:
+        if isinstance(name_or_id, StreamIdBase):
+            return self.make_stream_from_id(name_or_id.content_id)
+
+        try:
+            return self.get_from_id(name_or_id)
+        except KeyError:
+            return self.get_from_name(name_or_id)
+
+    def get_from_name(self, name: str) -> StreamableT:
+        try:
+            return self.name2stream[name]
+        except KeyError:
+            raise ValueError(f"Stream `{name}` not found. Available streams: {list(self.name2stream)}") from None
+
+    def get_from_id(self, id: str) -> StreamableT:
+        if UUID_REGEX.match(id):
+            return self.make_stream_from_id(id)
+        return self.id2stream[id]
+
+    def make_stream_from_id(self, uuid: str) -> StreamableT:
+        return self.factory({"id": "/".join(self.parts + [uuid])})
+
+
 class FeedlyUser(FeedlyData):
     def __init__(self, profile_json: Dict[str, Any], client: APIClient):
         super().__init__(profile_json, client)
-        self._categories: Dict[str, "UserCategory"] = None
-        self._enterprise_categories: Dict[str, "EnterpriseCategory"] = None
-        self._tags: Dict[str:"UserTag"] = None
-        self._enterprise_tags: Dict[str:"EnterpriseTag"] = None
         self._populated = len(profile_json) > 1
 
     def __getitem__(self, item):
@@ -203,115 +265,86 @@ class FeedlyUser(FeedlyData):
         self._populate()
         return self["enterpriseName"]
 
-    def _onchange(self):
-        self._categories = None
-        self._tags = None
+    @cached_property
+    def enterprise_categories(self) -> LazyStreams[EnterpriseCategory]:
+        return LazyStreams(
+            [STREAM_SOURCE_ENTERPRISE, self.enterprise_name, "category"],
+            endpoint="/v3/enterprise/collections",
+            factory=EnterpriseCategory,
+            client=self._client,
+        )
 
-    def _get_categories_or_tags(self, endpoint, factory):
-        rv = {}
-        resp = self._client.do_api_request(endpoint)
-        for item in resp:
-            item = factory(item, self._client)
-            rv[item.stream_id.content_id] = item
+    @cached_property
+    def enterprise_tags(self) -> LazyStreams[EnterpriseTag]:
+        return LazyStreams(
+            [STREAM_SOURCE_ENTERPRISE, self.enterprise_name, "tag"],
+            endpoint="/v3/enterprise/tags",
+            factory=EnterpriseTag,
+            client=self._client,
+        )
 
-        return rv
+    @cached_property
+    def user_categories(self) -> LazyStreams[UserCategory]:
+        return LazyStreams(
+            [STREAM_SOURCE_USER, self.id, "category"],
+            endpoint="/v3/categories",
+            factory=UserCategory,
+            client=self._client,
+        )
 
-    def get_categories(self, refresh: bool = False) -> Dict[str, "UserCategory"]:
-        if self._categories is None or refresh:
-            self._categories = self._get_categories_or_tags("/v3/categories", UserCategory)
+    @cached_property
+    def user_tags(self) -> LazyStreams[UserTag]:
+        return LazyStreams(
+            [STREAM_SOURCE_USER, self.id, "tag"], endpoint="/v3/tags", factory=UserTag, client=self._client,
+        )
 
-        return self._categories
-
-    def get_enterprise_categories(self, refresh: bool = False) -> Dict[str, "EnterpriseCategory"]:
-        if self._enterprise_categories is None or refresh:
-            self._enterprise_categories = self._get_categories_or_tags("/v3/enterprise/collections", EnterpriseCategory)
-            if self._enterprise_categories:
-                self.json["enterpriseName"] = next(iter(self._enterprise_categories.values())).stream_id.source_id
-
-        return self._enterprise_categories
-
-    def get_tags(self, refresh: bool = False) -> Dict[str, "UserTag"]:
-        if self._tags is None or refresh:
-            self._tags = self._get_categories_or_tags("/v3/tags", UserTag)
-
-        return self._tags
-
-    def get_enterprise_tags(self, refresh: bool = False) -> Dict[str, "EnterpriseTag"]:
-        if self._enterprise_tags is None or refresh:
-            self._enterprise_tags = self._get_categories_or_tags("/v3/enterprise/tags", EnterpriseTag)
-            if self._enterprise_tags:
-                self.json["enterpriseName"] = next(iter(self._enterprise_tags.values())).stream_id.source
-
-        return self._enterprise_tags
-
-    def _get_category_or_tag(
-        self,
-        stream_id: StreamIdBase,
-        cache: Dict[str, Streamable],
-        factory: Callable[[Dict[str, str]], Streamable],
-        auto_create: bool,
-    ):
-        if cache:
-            data = cache.get(stream_id.content_id)
-            if data:
-                return data
-
-            if not auto_create:
-                raise ValueError(f"{stream_id.id} does not exist")
-            else:
-                cache.clear()
-
-        return factory({"id": stream_id.id}, self._client)
-
-    def get_category(self, key: Union[str, UserStreamId]):
+    def get_category(self, key: Union[str, UserStreamId]) -> UserCategory:
         """
-        :param key: the id of the category (e.g. "recipes"), or stream ID object
+        :param key: the name or UUID of the tag (dash separated hex numbers), or a stream ID object
         :return: the category
         """
-        if isinstance(key, str):
-            id_ = UserStreamId(parts=[STREAM_SOURCE_USER, self.id, "category", key])
-        else:
-            id_ = key
+        return self.user_categories.get(key)
 
-        return self._get_category_or_tag(id_, self._categories, UserCategory, False)
-
-    def get_tag(self, key: Union[str, UserStreamId]) -> "UserTag":
+    def get_tag(self, key: Union[str, UserStreamId]) -> UserTag:
         """
-        :param key: the id of the tag (e.g. "recipes"), or stream ID object
+        :param key: the name or UUID of the tag (dash separated hex numbers), or a stream ID object
         :return: the tag
         """
-        if isinstance(key, str):
-            id_ = UserStreamId(parts=[STREAM_SOURCE_USER, self.id, "tag", key])
-        else:
-            id_ = key
+        return self.user_tags.get(key)
 
-        return self._get_category_or_tag(id_, self._tags, UserTag, True)
-
-    def get_enterprise_category(self, key: Union[str, EnterpriseStreamId]) -> "EnterpriseCategory":
+    def get_enterprise_category(self, key: Union[str, EnterpriseStreamId]) -> EnterpriseCategory:
         """
-        :param key: the UUID of the category (dash separated hex numbers), or a stream ID object)
+        :param key: the name or UUID of the tag (dash separated hex numbers), or a stream ID object
         :return: the enterprise category
         """
-        if isinstance(key, str):
-            id_ = EnterpriseStreamId(parts=[STREAM_SOURCE_ENTERPRISE, self.enterprise_name, "category", key])
-        else:
-            id_ = key
+        return self.enterprise_categories.get(key)
 
-        return self._get_category_or_tag(id_, self._enterprise_categories, EnterpriseCategory, False)
-
-    def get_enterprise_tag(self, key: Union[str, EnterpriseStreamId]) -> "EnterpriseTag":
+    def get_enterprise_tag(self, key: Union[str, EnterpriseStreamId]) -> EnterpriseTag:
         """
-        :param key: the UUID of the tag (dash separated hex numbers), or a stream ID object)
+        :param key: the name or UUID of the tag (dash separated hex numbers), or a stream ID object
         :return: the enterprise tag
         """
-        if isinstance(key, str):
-            id_ = EnterpriseStreamId(parts=[STREAM_SOURCE_ENTERPRISE, self.enterprise_name, "tag", key])
-        else:
-            id_ = key
+        return self.enterprise_tags.get(key)
 
-        return self._get_category_or_tag(id_, self._enterprise_tags, EnterpriseTag, False)
+    def get_all_user_categories_stream(self) -> UserCategory:
+        """
+        :return: the stream containing all the categories followed by the user
+        """
+        return self.user_categories.make_stream_from_id("global.all")
 
-    def create_enterprise_tag(self, data: Dict[str, Any]) -> "EnterpriseTag":
+    def get_all_enterprise_categories_stream(self) -> UserCategory:
+        """
+        :return: the stream containing all the categories followed by the enterprise
+        """
+        return self.user_categories.make_stream_from_id("global.enterprise")
+
+    def get_all_enterprise_tags_stream(self) -> UserTag:
+        """
+        :return: the stream containing all the tags of the enterprise
+        """
+        return self.user_tags.make_stream_from_id("global.enterprise")
+
+    def create_enterprise_tag(self, data: Dict[str, Any]) -> EnterpriseTag:
         """
         :param data: The dictionary with the info for the new tag creation.
         :return: the newly created enterprise tag

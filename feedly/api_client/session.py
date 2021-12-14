@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Union
 from urllib.parse import quote_plus
 
-from requests import Session
+from requests import Response, Session
 from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError
 
@@ -125,22 +125,54 @@ class FeedlySession(APIClient):
         self.close()
 
     @property
-    def user(self) -> "FeedlyUser":
+    def user(self) -> FeedlyUser:
         return self._user
 
     def do_api_request(
-        self, relative_url: str, method: str = None, data: Dict = None, timeout: int = None, max_tries: int = None
-    ) -> Union[Dict[str, Any], List[Any]]:
+        self,
+        relative_url: str,
+        method: str = None,
+        params: Dict[str, Any] = None,
+        data: Dict = None,
+        timeout: int = None,
+        max_tries: int = None,
+    ) -> Union[Dict[str, Any], List[Any], None]:
         """
-        makes a request to the feedly cloud API (https://developers.feedly.com)
+        makes a request to the feedly cloud API (https://developers.feedly.com), and parse the response
         :param relative_url: the url path and query parts, starting with /v3
+        :param params: the query parameters.
         :param data: the post data to send (as json).
         :param method: the http method to use, will default to get or post based on the presence of post data
         :param timeout: the timeout interval
         :param max_tries: the number of tries to do before failing
-        :param protocol: the protocol to use (http or https)
         :return: the request result as parsed from json.
         :rtype: dict or list, based on the API response
+        :raises: requests.exceptions.HTTPError on failure. An appropriate subclass may be raised when appropriate,
+         (see the ones defined in this module).
+        """
+        resp = self.make_api_request(
+            relative_url=relative_url, method=method, params=params, data=data, timeout=timeout, max_tries=max_tries
+        )
+        return resp.json() if resp.content is not None and len(resp.content) > 0 else None
+
+    def make_api_request(
+        self,
+        relative_url: str,
+        method: str = None,
+        params: Dict[str, Any] = None,
+        data: Dict = None,
+        timeout: int = None,
+        max_tries: int = None,
+    ) -> Response:
+        """
+        makes a request to the feedly cloud API (https://developers.feedly.com), and parse the response
+        :param relative_url: the url path and query parts, starting with /v3
+        :param params: the query parameters.
+        :param data: the post data to send (as json).
+        :param method: the http method to use, will default to get or post based on the presence of post data
+        :param timeout: the timeout interval
+        :param max_tries: the number of tries to do before failing
+        :return: the request result as parsed from json.
         :raises: requests.exceptions.HTTPError on failure. An appropriate subclass may be raised when appropriate,
          (see the ones defined in this module).
         """
@@ -161,7 +193,7 @@ class FeedlySession(APIClient):
                 f"invalid endpoint {relative_url} -- must start with /v3/ See https://developers.feedly.com"
             )
 
-        if 10 < max_tries < 0:
+        if max_tries < 0 or max_tries > 10:
             raise ValueError("invalid max tries")
 
         full_url = f"{self.api_host}{relative_url}"
@@ -190,7 +222,9 @@ class FeedlySession(APIClient):
                 resp = None
                 conn_error = None
                 try:
-                    resp = self.session.request(method, full_url, headers=headers, timeout=timeout, json=data)
+                    resp = self.session.request(
+                        method, full_url, headers=headers, timeout=timeout, json=data, params=params
+                    )
                 except OSError as e:
                     conn_error = e
 
@@ -198,7 +232,7 @@ class FeedlySession(APIClient):
                     self.rate_limiter.update(resp)
 
                 if not conn_error and resp.ok:
-                    return resp.json() if resp.content is not None and len(resp.content) > 0 else None
+                    return resp
                 else:
                     if tries == max_tries or (
                         resp is not None and 400 <= resp.status_code <= 500
@@ -206,6 +240,7 @@ class FeedlySession(APIClient):
                         if conn_error:
                             raise conn_error
                         else:
+                            logging.error(resp.json())
                             resp.raise_for_status()
                     logging.warning("Error for %s: %s", relative_url, conn_error if conn_error else resp.text)
                     time.sleep(2 ** (tries - 1))  # 1 second, then 2, 4, 8, etc.
