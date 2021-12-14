@@ -8,21 +8,21 @@ from requests.exceptions import HTTPError
 
 
 class WrappedHTTPError(HTTPError):
-    def __init__(self, ex:HTTPError):
+    def __init__(self, ex: HTTPError):
         super().__init__(request=ex.request, response=ex.response)
         self.id = None
         self.message = None
         try:
             info = json.loads(ex.response.text)
-            self.id = info.get('errorId')
-            self.message = info.get('errorMessage')
+            self.id = info.get("errorId")
+            self.message = info.get("errorMessage")
         except:
             pass
 
     @property
     def reason(self):
         if self.message:
-            return f'{self.response.reason}: {self.message}'
+            return f"{self.response.reason}: {self.message}"
         else:
             return self.response.reason
 
@@ -40,7 +40,7 @@ class ServerAPIError(WrappedHTTPError):
 
 
 class RateLimitedAPIError(WrappedHTTPError):
-    def __init__(self, ex:HTTPError=None):
+    def __init__(self, ex: HTTPError = None):
         """
         This error can occur when receiving a rate limited response (429) OR an attempt to use a rate limited client
         :param ex: the underlying error if the first case
@@ -48,8 +48,8 @@ class RateLimitedAPIError(WrappedHTTPError):
         if ex:
             super().__init__(ex)
         else:
-            self.message = 'Request Aborted: Client is rate limited'
-            self.response = {'status_code': 429, 'headers': {}, 'reason': 'too many requests'}
+            self.message = "Request Aborted: Client is rate limited"
+            self.response = {"status_code": 429, "headers": {}, "reason": "too many requests"}
 
 
 def _try_int(str) -> Optional[int]:
@@ -61,9 +61,9 @@ def _try_int(str) -> Optional[int]:
 
 class RateLimiter:
     def __init__(self):
-        self.count:int = None
-        self.limit:int = None
-        self.until:float = None
+        self.count: int = None
+        self.limit: int = None
+        self.until: float = None
 
     @property
     def rate_limited(self):
@@ -73,12 +73,12 @@ class RateLimiter:
     def make_rate_limited(self, t=60):
         self.count = 1
         self.limit = 1
-        self.until = time.time()+t
+        self.until = time.time() + t
 
-    def update(self, response:Response):
-        headers = [response.headers.get(h) for h in ['X-RateLimit-Count', 'X-RateLimit-Limit', 'X-RateLimit-Reset']]
+    def update(self, response: Response):
+        headers = [response.headers.get(h) for h in ["X-RateLimit-Count", "X-RateLimit-Limit", "X-RateLimit-Reset"]]
         headers = [_try_int(h) if h is not None else None for h in headers]
-        count,limit,reset = headers
+        count, limit, reset = headers
         if count:
             self.count = count
         if limit:
@@ -91,18 +91,19 @@ class RateLimiter:
 
     def __repr__(self):
         if self.count and self.limit and self.until:
-            return f'<RateLimiter count={self.count} limit={self.limit} until={datetime.datetime.fromtimestamp(self.until).isoformat()}>'
+            return f"<RateLimiter count={self.count} limit={self.limit} until={datetime.datetime.fromtimestamp(self.until).isoformat()}>"
 
-        return '<RateLimiter>'
+        return "<RateLimiter>"
 
     def __str__(self):
         return self.__repr__()
 
+
 class APIClient:
-
     def __init__(self):
-        self.rate_limiter:RateLimiter = RateLimiter()
+        self.rate_limiter: RateLimiter = RateLimiter()
 
-    def do_api_request(self, relative_url:str, method:str=None, data:Dict=None,
-                       timeout: int = None, max_tries: int = None) -> Union[Dict[str, Any], List[Any]]:
+    def do_api_request(
+        self, relative_url: str, method: str = None, data: Dict = None, timeout: int = None, max_tries: int = None
+    ) -> Union[Dict[str, Any], List[Any]]:
         raise ValueError

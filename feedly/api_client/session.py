@@ -10,26 +10,32 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import HTTPError
 
 from feedly.api_client.data import FeedlyUser
-from feedly.api_client.protocol import APIClient, BadRequestAPIError, RateLimitedAPIError, ServerAPIError, \
-    UnauthorizedAPIError
+from feedly.api_client.protocol import (
+    APIClient,
+    BadRequestAPIError,
+    RateLimitedAPIError,
+    ServerAPIError,
+    UnauthorizedAPIError,
+)
 
 
 class Auth:
     """
     simple class to manage tokens
     """
-    def __init__(self, client_id:str='feedlydev', client_secret:str='feedlydev'):
-        self.client_id:str = client_id
-        self.client_secret:str = client_secret
-        self._auth_token:str = None
-        self.refresh_token:str = None
+
+    def __init__(self, client_id: str = "feedlydev", client_secret: str = "feedlydev"):
+        self.client_id: str = client_id
+        self.client_secret: str = client_secret
+        self._auth_token: str = None
+        self.refresh_token: str = None
 
     @property
     def auth_token(self):
         return self._auth_token
 
     @auth_token.setter
-    def auth_token(self, token:str):
+    def auth_token(self, token: str):
         self._auth_token = token
 
 
@@ -37,7 +43,8 @@ class FileAuthStore(Auth):
     """
     a file based token storage scheme
     """
-    def __init__(self, token_dir:Path, client_id:str='feedlydev', client_secret:str='feedlydev'):
+
+    def __init__(self, token_dir: Path, client_id: str = "feedlydev", client_secret: str = "feedlydev"):
         """
 
         :param token_dir: the directory to store the tokens
@@ -46,23 +53,29 @@ class FileAuthStore(Auth):
         """
         super().__init__(client_id, client_secret)
         if not token_dir.is_dir():
-            raise ValueError(f'{token_dir.absolute()} does not exist!')
+            raise ValueError(f"{token_dir.absolute()} does not exist!")
 
-        refresh_path = token_dir / 'refresh.token'
+        refresh_path = token_dir / "refresh.token"
         if refresh_path.is_file():
             self.refresh_token = refresh_path.read_text().strip()
 
-        self.auth_token_path:Path = token_dir / 'access.token'
+        self.auth_token_path: Path = token_dir / "access.token"
         self._auth_token = self.auth_token_path.read_text().strip()
 
     @Auth.auth_token.setter
-    def auth_token(self, token:str):
+    def auth_token(self, token: str):
         self._auth_token = token
         self.auth_token_path.write_text(token)
 
 
 class FeedlySession(APIClient):
-    def __init__(self, auth:Union[str, Auth], api_host:str='https://feedly.com', user_id:str=None, client_name='feedly.python.client'):
+    def __init__(
+        self,
+        auth: Union[str, Auth],
+        api_host: str = "https://feedly.com",
+        user_id: str = None,
+        client_name="feedly.python.client",
+    ):
         """
         :param auth: either the access token str to use when making requests or an Auth object to manage tokens
         :param api_host: the feedly api server host.
@@ -71,28 +84,30 @@ class FeedlySession(APIClient):
         """
         super().__init__()
         if not client_name:
-            raise ValueError('you must identify your client!')
+            raise ValueError("you must identify your client!")
 
         if isinstance(auth, str):
-            token:str = auth
+            token: str = auth
             auth = Auth()
             auth.auth_token = token
 
-        self.auth:Auth = auth
-        self.api_host:str = api_host
+        self.auth: Auth = auth
+        self.api_host: str = api_host
         self.session = Session()
-        self.session.mount('https://feedly.com', HTTPAdapter(max_retries=1)) # as to treat feedly server and connection errors identically
+        self.session.mount(
+            "https://feedly.com", HTTPAdapter(max_retries=1)
+        )  # as to treat feedly server and connection errors identically
         self.client_name = client_name
-        self.timeout:int = 10
-        self.max_tries:int = 3
+        self.timeout: int = 10
+        self.max_tries: int = 3
 
-        user_data = {'id': user_id} if user_id else {}
-        self._user:FeedlyUser = FeedlyUser(user_data, self)
-        self._valid:bool = None
-        self._last_token_refresh_attempt:float = 0
+        user_data = {"id": user_id} if user_id else {}
+        self._user: FeedlyUser = FeedlyUser(user_data, self)
+        self._valid: bool = None
+        self._last_token_refresh_attempt: float = 0
 
     def __repr__(self):
-        return f'<feedly client user={self.user.id}>'
+        return f"<feedly client user={self.user.id}>"
 
     def __str__(self):
         return self.__repr__()
@@ -110,11 +125,12 @@ class FeedlySession(APIClient):
         self.close()
 
     @property
-    def user(self) -> 'FeedlyUser':
+    def user(self) -> "FeedlyUser":
         return self._user
 
-    def do_api_request(self, relative_url:str, method:str=None, data:Dict=None,
-                       timeout: int = None, max_tries: int = None) -> Union[Dict[str, Any], List[Any]]:
+    def do_api_request(
+        self, relative_url: str, method: str = None, data: Dict = None, timeout: int = None, max_tries: int = None
+    ) -> Union[Dict[str, Any], List[Any]]:
         """
         makes a request to the feedly cloud API (https://developers.feedly.com)
         :param relative_url: the url path and query parts, starting with /v3
@@ -135,27 +151,29 @@ class FeedlySession(APIClient):
             max_tries = self.max_tries
 
         if self.auth.auth_token is None:
-            raise ValueError('authorization token required!')
+            raise ValueError("authorization token required!")
 
-        if relative_url[0] != '/':
-            relative_url = '/' + relative_url
+        if relative_url[0] != "/":
+            relative_url = "/" + relative_url
 
-        if not relative_url.startswith('/v3/'):
-            raise ValueError(f'invalid endpoint {relative_url} -- must start with /v3/ See https://developers.feedly.com')
+        if not relative_url.startswith("/v3/"):
+            raise ValueError(
+                f"invalid endpoint {relative_url} -- must start with /v3/ See https://developers.feedly.com"
+            )
 
         if 10 < max_tries < 0:
-            raise ValueError('invalid max tries')
+            raise ValueError("invalid max tries")
 
-        full_url = f'{self.api_host}{relative_url}'
-        if '?client=' not in full_url and '&client=' not in full_url:
-            full_url += ('&' if '?' in full_url else '?') + 'client=' + quote_plus(self.client_name)
+        full_url = f"{self.api_host}{relative_url}"
+        if "?client=" not in full_url and "&client=" not in full_url:
+            full_url += ("&" if "?" in full_url else "?") + "client=" + quote_plus(self.client_name)
 
         tries = 0
         if method is None:
-            method = 'get' if data is None else 'post'
+            method = "get" if data is None else "post"
 
-        if method == 'get' and data is not None:
-            raise ValueError('post data not allowed for GET requests')
+        if method == "get" and data is not None:
+            raise ValueError("post data not allowed for GET requests")
 
         try:
             if self.rate_limiter.rate_limited:
@@ -164,10 +182,10 @@ class FeedlySession(APIClient):
                 tries += 1
                 if self.rate_limiter.rate_limited:
                     until = datetime.datetime.fromtimestamp(self.rate_limiter.until).isoformat()
-                    raise ValueError(f'Too many requests. Client is rate limited until {until}')
-                headers = {'Authorization': self.auth.auth_token}
+                    raise ValueError(f"Too many requests. Client is rate limited until {until}")
+                headers = {"Authorization": self.auth.auth_token}
                 if data:
-                    headers['Content-Type'] = 'application/json'
+                    headers["Content-Type"] = "application/json"
 
                 resp = None
                 conn_error = None
@@ -182,28 +200,40 @@ class FeedlySession(APIClient):
                 if not conn_error and resp.ok:
                     return resp.json() if resp.content is not None and len(resp.content) > 0 else None
                 else:
-                    if tries == max_tries or (resp is not None and 400 <= resp.status_code <= 500): # don't retry bad requests:
+                    if tries == max_tries or (
+                        resp is not None and 400 <= resp.status_code <= 500
+                    ):  # don't retry bad requests:
                         if conn_error:
                             raise conn_error
                         else:
                             resp.raise_for_status()
-                    logging.warning('Error for %s: %s', relative_url, conn_error if conn_error else resp.text)
+                    logging.warning("Error for %s: %s", relative_url, conn_error if conn_error else resp.text)
                     time.sleep(2 ** (tries - 1))  # 1 second, then 2, 4, 8, etc.
         except HTTPError as e:
             code = e.response.status_code
             if code == 400:
                 raise BadRequestAPIError(e)
             elif code == 401:
-                if not relative_url.startswith('/v3/auth') and self.auth.refresh_token and time.time() - self._last_token_refresh_attempt > 86400:
+                if (
+                    not relative_url.startswith("/v3/auth")
+                    and self.auth.refresh_token
+                    and time.time() - self._last_token_refresh_attempt > 86400
+                ):
                     try:
                         self._last_token_refresh_attempt = time.time()
-                        auth_data = {'refresh_token': self.auth.refresh_token, 'grant_type': 'refresh_token',
-                                     'client_id': self.auth.client_id, 'client_secret': self.auth.client_secret}
-                        token_data = self.do_api_request('/v3/auth/token', data=auth_data)
-                        self.auth.auth_token = token_data['access_token']
-                        return self.do_api_request(relative_url=relative_url, method=method, data=data, timeout=timeout, max_tries=max_tries)
+                        auth_data = {
+                            "refresh_token": self.auth.refresh_token,
+                            "grant_type": "refresh_token",
+                            "client_id": self.auth.client_id,
+                            "client_secret": self.auth.client_secret,
+                        }
+                        token_data = self.do_api_request("/v3/auth/token", data=auth_data)
+                        self.auth.auth_token = token_data["access_token"]
+                        return self.do_api_request(
+                            relative_url=relative_url, method=method, data=data, timeout=timeout, max_tries=max_tries
+                        )
                     except Exception as e2:
-                        logging.info('error refreshing access token', exc_info=e2)
+                        logging.info("error refreshing access token", exc_info=e2)
                         # fall through to raise auth error
                 raise UnauthorizedAPIError(e)
             elif code == 429:
