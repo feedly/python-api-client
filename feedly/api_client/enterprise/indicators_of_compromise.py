@@ -7,7 +7,7 @@ from feedly.api_client.data import Streamable
 from feedly.api_client.session import FeedlySession
 
 
-class FeedlyIoCFetcher:
+class IoCDownloader:
     RELATIVE_URL = "/v3/enterprise/ioc"
 
     def __init__(self, session: FeedlySession, newer_than: Optional[datetime] = None):
