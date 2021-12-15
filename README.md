@@ -11,29 +11,29 @@ but will get you going.
 If you're serious about building an app, you probably want to get a
  [developer token](https://developers.feedly.com/v3/developer/). Check the page for more details.
 
-If we assume you saved the token value in a `access.token` file in your home directory, you can
-initalize the client as follows:
+You can run [feedly/examples/setup_auth.py](feedly/examples/setup_auth.py) to get your access token saved into the default config directory, `~/.config/feedly`. Then, you can initialize the client as follows:
 
 ```
-from pathlib import Path
 from feedly.api_client.session import FeedlySession
 
-token = (Path.home() / 'access.token').read_text().strip()
-sess = FeedlySession(token)
+sess = FeedlySession()
 ```
 Clients are lightweight -- you can keep a client around for the lifetime of your program,
 or you can create a new one when needed. It's a bit more efficient to keep it around. If you
 do choose to create clients as needed, you should pass in the user's ID in the constructor, 
 otherwise you'll incur a `/v3/profile` request. 
 
+## Examples setup
+
+When running [an example](feedly/examples), for the first time, you'll be prompted to enter your token. It will be saved in ~/.config/feedly
+
 ## API Oriented Usage
 You can use the `FeedlySession` object to make arbitrary API requests. E.g.:
 
-```
+```python
 sess.do_api_request('/v3/feeds/feed%2Fhttp%3A%2F%2Fblog.feedly.com%2Ffeed%2F')
-
-------------------
-
+```
+```json
 {
   "id": "feed/http://blog.feedly.com/feed/",
   "feedId": "feed/http://blog.feedly.com/feed/",
@@ -42,45 +42,53 @@ sess.do_api_request('/v3/feeds/feed%2Fhttp%3A%2F%2Fblog.feedly.com%2Ffeed%2F')
 }
 ```
 
+
 ## Object Oriented Usage
 
-#### Retrieving Articles
-Alternatively, you can use the object oriented code, which facilitates common usage patterns.
+#### Retrieving Streams
+Alternatively, you can use the object-oriented code, which facilitates common usage patterns.
 E.g. you can list your user categories:
 ```
-sess.user.get_categories()
+sess.user.user_categories.name2stream
+```
 
-------------------
-
-{'comics': <UserCategory: user/xxx/category/comics>,
- 'econ': <UserCategory: user/xxx/category/econ>,
- 'global.must': <UserCategory: user/xxx/category/global.must>,
- 'politics': <UserCategory: user/xxx/category/politics>,
+```json
+{'comics': <UserCategory: user/xxx/category/aaa>,
+ 'econ': <UserCategory: user/xxx/category/bbb>,
+ 'global.must': <UserCategory: user/xxx/category/ccc>,
+ 'politics': <UserCategory: user/xxx/category/ddd>,
 }
 ```
 where `xxx` is your actual user ID.
 
 It's not necessary to list categories beforehand, if you know the ones that exist, you can 
-get one on the fly:
+get one on the fly, by querying it by id or name:
+```python
+sess.user.user_categories.get('comics')  # From the category name
+sess.user.user_categories.get('aaa')  # From the category id
 ```
-sess.user.get_category('comics'))
-
-------------------
-
-<UserCategory: user/xxx/category/comics>
 ```
+<UserCategory: user/xxx/category/aaa>
+```
+
+You can access:
+ - User feeds with `sess.user.user_categories`
+ - User boards with `sess.user.user_tags`
+ - Team feeds with `sess.user.enterprise_categories`
+ - Team boards with `sess.user.enterprise_tags`
+
 
 #### Accessing Entries (articles)
 If you need to access entries or entry IDs, you can use easily stream them via `stream_contents`
 and `stream_ids`, respectively:
 
-```
+```python
 with FeedlySession(auth_token=token) as sess:
-    for eid in sess.user.get_category('politics').stream_ids():
+    for eid in sess.user.user_categories.get('politics').stream_ids():
          print(eid)
 
-------------------
-
+```
+```
 Dz51gkBgvGUvFOfTATCYLB2uqVaBIaGGazzxpZh2WL0=_16549c827dd:1645ba:3da9d93
 Dz51gkBgvGUvFOfTATCYLB2uqVaBIaGGazzxpZh2WL0=_16549c827dd:1645bb:3da9d93
 Z/Hzx8NYfSSE8sweA2v5+4r5h7HC5ALdE2YGYB8MYbQ=_1654a26f3fe:79d9ef9:6f86c10b
@@ -91,18 +99,18 @@ Take note of the `StreamOptions` class. There are important `max_count` and `cou
 properties that control streaming. To download all items, something like this could
 be done:
 
-```
+```python
 opts = StreamOptions(max_count=sys.maxsize) # down all items that exist
 opts.count = sys.maxsize # download as many items as possible in every API request
-with FeedlySession(auth_token=token) as sess:
+with FeedlySession() as sess:
     for eid in sess.user.get_category('politics').stream_ids(opts):
          print(eid)
 
 ```
 
 #### Tagging Existing Entries
-```
-with FeedlySession(auth_token=token) as sess:
+```python
+with FeedlySession() as sess:
     sess.user.get_tag('politics').tag_entry(eid)
 ```
 

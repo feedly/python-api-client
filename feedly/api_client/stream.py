@@ -56,6 +56,12 @@ class StreamIdBase:
     def __str__(self):
         return self.__repr__()
 
+    def is_category(self):
+        return self.type == "category"
+
+    def is_tag(self):
+        return self.type == "tag"
+
 
 class UserStreamId(StreamIdBase):
     """
@@ -76,12 +82,6 @@ class UserStreamId(StreamIdBase):
 
         super().__init__(id_, STREAM_SOURCE_USER, parts[1], parts[2], "/".join(parts[3:]))
 
-    def is_category(self):
-        return self.type == "category"
-
-    def is_tag(self):
-        return self.type == "tag"
-
 
 class EnterpriseStreamId(StreamIdBase):
     def __init__(self, id_: str = None, parts: List[str] = None):
@@ -101,12 +101,6 @@ class EnterpriseStreamId(StreamIdBase):
             raise ValueError("not an enterprise stream: " + id_)
 
         super().__init__(id_, STREAM_SOURCE_ENTERPRISE, parts[1], parts[2], parts[3])
-
-    def is_category(self):
-        return self.type == "category"
-
-    def is_tag(self):
-        return self.type == "tag"
 
 
 class StreamOptions:
