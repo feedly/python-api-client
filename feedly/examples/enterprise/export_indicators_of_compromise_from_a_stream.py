@@ -17,12 +17,12 @@ def example_export_indicators_of_compromise_from_all_enterprise_feeds():
 
     # Create the IoC fetcher object, and limit it to 12 hours
     # Usually newer_than will be the datetime of the last fetch
-    fetcher = IoCDownloader(session=session, newer_than=datetime.now() - timedelta(hours=12))
+    downloader = IoCDownloader(session=session, newer_than=datetime.now() - timedelta(hours=12))
 
     # Fetch the IoC from all the enterprise categories, and create a bundle containing them
     # You can use a different method to get the iocs from you personal categories, personal or enterprise boards,
     #  or from specific categories/boards using their names or ids
-    iocs_bundle = fetcher.from_all_enterprise_categories()
+    iocs_bundle = downloader.from_all_enterprise_categories()
 
     # Save the bundle in a file
     with (RESULTS_DIR / "ioc_example.json").open("w") as f:
