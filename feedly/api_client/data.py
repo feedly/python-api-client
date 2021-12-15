@@ -73,7 +73,7 @@ class Streamable(FeedlyData, ABC):
 
     @property
     @abstractmethod
-    def stream_id(self):
+    def stream_id(self) -> StreamIdBase:
         ...
 
     def _get_id(self):
@@ -206,6 +206,9 @@ class LazyStreams(Generic[StreamableT]):
 
     def get(self, name_or_id: Union[str, StreamIdBase]) -> StreamableT:
         if isinstance(name_or_id, StreamIdBase):
+            assert name_or_id.id.startswith(
+                "/".join(self.parts)
+            ), f"stream id {name_or_id} must start with streams parts {self.parts}"
             return self.make_stream_from_id(name_or_id.content_id)
 
         try:
@@ -222,7 +225,11 @@ class LazyStreams(Generic[StreamableT]):
     def get_from_id(self, id: str) -> StreamableT:
         if UUID_REGEX.match(id):
             return self.make_stream_from_id(id)
-        return self.id2stream[id]
+
+        try:
+            return self.id2stream[id]
+        except KeyError:
+            raise ValueError(f"Stream `{id}` not found. Available streams: {list(self.id2stream)}") from None
 
     def make_stream_from_id(self, uuid: str) -> StreamableT:
         return self.factory({"id": "/".join(self.parts + [uuid])}, self.client)
