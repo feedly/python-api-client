@@ -2,7 +2,7 @@ import datetime
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 from urllib.parse import quote_plus
 
 from requests import Response, Session
@@ -46,7 +46,12 @@ class FileAuthStore(Auth):
     a file based token storage scheme
     """
 
-    def __init__(self, token_dir: Path, client_id: str = "feedlydev", client_secret: str = "feedlydev"):
+    def __init__(
+        self,
+        token_dir: Path = Path.home() / ".config/feedly",
+        client_id: str = "feedlydev",
+        client_secret: str = "feedlydev",
+    ):
         """
 
         :param token_dir: the directory to store the tokens
@@ -73,13 +78,15 @@ class FileAuthStore(Auth):
 class FeedlySession(APIClient):
     def __init__(
         self,
-        auth: Union[str, Auth],
+        auth: Optional[Union[str, Auth]] = None,
         api_host: str = "https://feedly.com",
         user_id: str = None,
         client_name="feedly.python.client",
     ):
         """
-        :param auth: either the access token str to use when making requests or an Auth object to manage tokens
+        :param auth: either the access token str to use when making requests or an Auth object to manage tokens. If none
+         are passed, it is assumed that the token and refresh token are correcly setup in the `~/.config/feedly`
+         directory. You can run setup_auth.py in the examples to get setup.
         :param api_host: the feedly api server host.
         :param user_id: the user id to use when making requests. If not set, a request will be made to determine the user from the auth token.
         :param client_name: the name of your client, set this to something that can identify your app.
@@ -92,6 +99,8 @@ class FeedlySession(APIClient):
             token: str = auth
             auth = Auth()
             auth.auth_token = token
+        elif auth is None:
+            auth = FileAuthStore()
 
         self.auth: Auth = auth
         self.api_host: str = api_host

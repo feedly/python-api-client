@@ -11,15 +11,12 @@ but will get you going.
 If you're serious about building an app, you probably want to get a
  [developer token](https://developers.feedly.com/v3/developer/). Check the page for more details.
 
-If we assume you saved the token value in a `access.token` file in your home directory, you can
-initalize the client as follows:
+You can run [feedly/examples/setup_auth.py](feedly/examples/setup_auth.py) to get your access token saved into the default config directory, `~.config/feedly`. Then, you can initialize the client as follows:
 
 ```
-from pathlib import Path
 from feedly.api_client.session import FeedlySession
 
-token = (Path.home() / 'access.token').read_text().strip()
-sess = FeedlySession(token)
+sess = FeedlySession()
 ```
 Clients are lightweight -- you can keep a client around for the lifetime of your program,
 or you can create a new one when needed. It's a bit more efficient to keep it around. If you
@@ -28,7 +25,7 @@ otherwise you'll incur a `/v3/profile` request.
 
 ## Examples setup
 
-To run [the examples](feedly/examples), you need first need to create a file containing you token in [feedly/examples/auth/access.token](feedly/examples/auth/access.token). You can also put your refresh token in [feedly/examples/auth/refresh.token](feedly/examples/auth/refresh.token).
+When running [an example](feedly/examples), for the first time, you'll be prompted to enter your token. It will be saved in ~/.config/feedly
 
 ## API Oriented Usage
 You can use the `FeedlySession` object to make arbitrary API requests. E.g.:
@@ -105,7 +102,7 @@ be done:
 ```python
 opts = StreamOptions(max_count=sys.maxsize) # down all items that exist
 opts.count = sys.maxsize # download as many items as possible in every API request
-with FeedlySession(auth_token=token) as sess:
+with FeedlySession() as sess:
     for eid in sess.user.get_category('politics').stream_ids(opts):
          print(eid)
 
@@ -113,7 +110,7 @@ with FeedlySession(auth_token=token) as sess:
 
 #### Tagging Existing Entries
 ```python
-with FeedlySession(auth_token=token) as sess:
+with FeedlySession() as sess:
     sess.user.get_tag('politics').tag_entry(eid)
 ```
 

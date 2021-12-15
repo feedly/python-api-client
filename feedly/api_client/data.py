@@ -213,7 +213,7 @@ class LazyStreams(Generic[StreamableT]):
 
         try:
             return self.get_from_id(name_or_id)
-        except KeyError:
+        except ValueError:
             return self.get_from_name(name_or_id)
 
     def get_from_name(self, name: str) -> StreamableT:
