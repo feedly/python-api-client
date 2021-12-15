@@ -68,17 +68,17 @@ It's not necessary to list categories beforehand, if you know the ones that exis
 get one on the fly, by querying it by id or name:
 ```python
 sess.user.user_categories.get('comics')  # From the category name
-sess.user.user_categories.get('xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx')  # From the category id
+sess.user.user_categories.get('aaa')  # From the category id
 ```
 ```
-<UserCategory: user/xxx/category/comics>
+<UserCategory: user/xxx/category/aaa>
 ```
 
 You can access:
- - User categories with `sess.user.user_categories`
- - User tags with `sess.user.user_tags`
- - Enterprise categories with `sess.user.enterprise_categories`
- - User categories with `sess.user.enterprise_tags`
+ - User feeds with `sess.user.user_categories`
+ - User boards with `sess.user.user_tags`
+ - Team feeds with `sess.user.enterprise_categories`
+ - Team boards with `sess.user.enterprise_tags`
 
 
 #### Accessing Entries (articles)
