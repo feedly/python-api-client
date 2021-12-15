@@ -6,25 +6,25 @@ from feedly.examples.utils import run_example
 
 def example_display_feeds_and_boards():
     """
-    This example will display your personal categories and tags.
-    Additionally, if you are part of a team, it will also display the enterprise ones.
+    This example will display your personal feeds and boards.
+    Additionally, if you are part of a team, it will also display the team ones.
     """
     # Create the session using the default auth directory
     user = FeedlySession().user
 
     # Display the personal categories and tags
-    print("User categories:")
+    print("User feeds:")
     pprint(user.user_categories.name2stream)
     print()
-    print("User tags:")
+    print("User boards:")
     pprint(user.user_tags.name2stream)
     # Display the enterprise categories and tags, if part of a team
     if "enterpriseName" in user.json:
         print()
-        print("Enterprise categories:")
+        print("Team feeds:")
         pprint(user.enterprise_categories.name2stream)
         print()
-        print("Enterprise tags:")
+        print("Team boards:")
         pprint(user.enterprise_tags.name2stream)
 
 
