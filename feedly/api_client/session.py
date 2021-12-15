@@ -18,6 +18,8 @@ from feedly.api_client.protocol import (
     UnauthorizedAPIError,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class Auth:
     """
@@ -240,9 +242,9 @@ class FeedlySession(APIClient):
                         if conn_error:
                             raise conn_error
                         else:
-                            logging.error(resp.json())
+                            logger.error(resp.json())
                             resp.raise_for_status()
-                    logging.warning("Error for %s: %s", relative_url, conn_error if conn_error else resp.text)
+                    logger.warning("Error for %s: %s", relative_url, conn_error if conn_error else resp.text)
                     time.sleep(2 ** (tries - 1))  # 1 second, then 2, 4, 8, etc.
         except HTTPError as e:
             code = e.response.status_code
@@ -268,7 +270,7 @@ class FeedlySession(APIClient):
                             relative_url=relative_url, method=method, data=data, timeout=timeout, max_tries=max_tries
                         )
                     except Exception as e2:
-                        logging.info("error refreshing access token", exc_info=e2)
+                        logger.info("error refreshing access token", exc_info=e2)
                         # fall through to raise auth error
                 raise UnauthorizedAPIError(e)
             elif code == 429:
