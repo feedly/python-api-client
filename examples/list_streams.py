@@ -1,7 +1,7 @@
 from pprint import pprint
 
 from feedly.api_client.session import FeedlySession
-from feedly.examples.utils import run_example
+from feedly.api_client.utils import run_example
 
 
 def example_display_feeds_and_boards():

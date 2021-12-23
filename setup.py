@@ -15,10 +15,10 @@ from setuptools import Command, setup
 NAME = "feedly-client"
 DESCRIPTION = "A lightweight client for the feedly api (https://developers.feedly.com)."
 URL = "https://github.com/feedly/python-api-client"
-EMAIL = "kireet@feedly.com"
-AUTHOR = "Kireet"
+EMAIL = "ml@feedly.com"
+AUTHOR = "Feedly"
 REQUIRES_PYTHON = ">=3.6.0"
-VERSION = "0.23"
+VERSION = "0.23.1"
 
 # What packages are required for this module to be executed?
 with open("requirements.txt") as f:
@@ -82,7 +82,7 @@ class UploadCommand(Command):
         os.system("{0} setup.py sdist bdist_wheel --universal".format(sys.executable))
 
         self.status("Uploading the package to PyPI via Twine…")
-        os.system("twine upload dist/*")
+        os.system("twine upload --repository pypi dist/*")
 
         self.status("Pushing git tags…")
         os.system("git tag v{0}".format(about["__version__"]))
@@ -102,12 +102,7 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=["feedly.api_client"],
-    # If your package is a single module, use this instead of 'packages':
-    # py_modules=['mypackage'],
-    # entry_points={
-    #     'console_scripts': ['mycli=mymodule:cli'],
-    # },
+    packages=["feedly.api_client", "feedly.api_client.enterprise"],
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,

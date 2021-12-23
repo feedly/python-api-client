@@ -11,7 +11,7 @@ but will get you going.
 If you're serious about building an app, you probably want to get a
  [developer token](https://developers.feedly.com/v3/developer/). Check the page for more details.
 
-You can run [feedly/examples/setup_auth.py](feedly/examples/setup_auth.py) to get your access token saved into the default config directory, `~/.config/feedly`. Then, you can initialize the client as follows:
+You can run [examples/setup_auth.py](examples/setup_auth.py) to get your access token saved into the default config directory, `~/.config/feedly`. Then, you can initialize the client as follows:
 
 ```
 from feedly.api_client.session import FeedlySession
@@ -23,9 +23,21 @@ or you can create a new one when needed. It's a bit more efficient to keep it ar
 do choose to create clients as needed, you should pass in the user's ID in the constructor, 
 otherwise you'll incur a `/v3/profile` request. 
 
-## Examples setup
+## Examples
 
-When running [an example](feedly/examples), for the first time, you'll be prompted to enter your token. It will be saved in ~/.config/feedly
+### Setup
+
+To run the examples we provide, you'll first need to clone and install the project (preferably in a new virtualenv environment):
+
+```bash
+git clone https://github.com/feedly/python-api-client.git
+cd python-api-client
+pip install .
+```
+
+### Auth
+
+When running [an example](examples), for the first time, you'll be prompted to enter your token. It will be saved in ~/.config/feedly
 
 ## API Oriented Usage
 You can use the `FeedlySession` object to make arbitrary API requests. E.g.:
