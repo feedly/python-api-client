@@ -4,11 +4,6 @@ from typing import Callable
 
 from feedly.api_client.protocol import UnauthorizedAPIError
 
-EXAMPLES_DIR = Path(__file__).parent.parent.parent / "examples"
-RESULTS_DIR = EXAMPLES_DIR / "results"
-
-RESULTS_DIR.mkdir(exist_ok=True)
-
 
 def run_example(f: Callable) -> None:
     setup_auth()

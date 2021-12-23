@@ -8,9 +8,7 @@ import io
 import os
 import sys
 from shutil import rmtree
-from typing import List
 
-import setuptools
 from setuptools import Command, setup
 
 # Package meta-data.
@@ -54,10 +52,6 @@ if not VERSION:
         exec(f.read(), about)
 else:
     about["__version__"] = VERSION
-
-
-def find_feedly_packages() -> List[str]:
-    return [f"feedly.{p}" for p in setuptools.find_packages(where="feedly")]
 
 
 class UploadCommand(Command):
@@ -108,7 +102,7 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_feedly_packages(),
+    packages=["feedly.api_client"],
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,
