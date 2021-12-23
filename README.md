@@ -23,7 +23,19 @@ or you can create a new one when needed. It's a bit more efficient to keep it ar
 do choose to create clients as needed, you should pass in the user's ID in the constructor, 
 otherwise you'll incur a `/v3/profile` request. 
 
-## Examples setup
+## Examples
+
+### Setup
+
+To run the examples we provide, you'll first need to clone and install the project (preferably in a new virtualenv environment):
+
+```bash
+git clone https://github.com/feedly/python-api-client.git
+cd python-api-client
+pip install .
+```
+
+### Auth
 
 When running [an example](examples), for the first time, you'll be prompted to enter your token. It will be saved in ~/.config/feedly
 
