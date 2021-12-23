@@ -11,7 +11,7 @@ but will get you going.
 If you're serious about building an app, you probably want to get a
  [developer token](https://developers.feedly.com/v3/developer/). Check the page for more details.
 
-You can run [feedly/examples/setup_auth.py](feedly/examples/setup_auth.py) to get your access token saved into the default config directory, `~/.config/feedly`. Then, you can initialize the client as follows:
+You can run [examples/setup_auth.py](examples/setup_auth.py) to get your access token saved into the default config directory, `~/.config/feedly`. Then, you can initialize the client as follows:
 
 ```
 from feedly.api_client.session import FeedlySession
@@ -25,7 +25,7 @@ otherwise you'll incur a `/v3/profile` request.
 
 ## Examples setup
 
-When running [an example](feedly/examples), for the first time, you'll be prompted to enter your token. It will be saved in ~/.config/feedly
+When running [an example](examples), for the first time, you'll be prompted to enter your token. It will be saved in ~/.config/feedly
 
 ## API Oriented Usage
 You can use the `FeedlySession` object to make arbitrary API requests. E.g.:

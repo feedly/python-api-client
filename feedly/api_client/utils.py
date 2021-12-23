@@ -3,9 +3,8 @@ from pathlib import Path
 from typing import Callable
 
 from feedly.api_client.protocol import UnauthorizedAPIError
-from feedly.examples.setup_auth import setup_auth
 
-EXAMPLES_DIR = Path(__file__).parent
+EXAMPLES_DIR = Path(__file__).parent.parent.parent / "examples"
 RESULTS_DIR = EXAMPLES_DIR / "results"
 
 RESULTS_DIR.mkdir(exist_ok=True)
@@ -24,3 +23,13 @@ def run_example(f: Callable) -> None:
         setup_auth(overwrite=True)
 
         f()
+
+
+def setup_auth(directory: Path = Path.home() / ".config/feedly", overwrite: bool = False):
+    directory.mkdir(exist_ok=True, parents=True)
+
+    auth_file = directory / "access.token"
+
+    if not auth_file.exists() or overwrite:
+        auth = input("Enter your token: ")
+        auth_file.write_text(auth.strip())

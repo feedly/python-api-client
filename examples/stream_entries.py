@@ -1,6 +1,6 @@
 from feedly.api_client.session import FeedlySession
 from feedly.api_client.stream import StreamOptions
-from feedly.examples.utils import run_example
+from feedly.api_client.utils import run_example
 
 
 def example_stream_entries():

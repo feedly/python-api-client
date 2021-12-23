@@ -4,7 +4,7 @@ from pprint import pprint
 
 from feedly.api_client.enterprise.indicators_of_compromise import IoCDownloader
 from feedly.api_client.session import FeedlySession
-from feedly.examples.utils import RESULTS_DIR, run_example
+from feedly.api_client.utils import RESULTS_DIR, run_example
 
 
 def example_export_indicators_of_compromise_from_all_enterprise_feeds():
