@@ -339,11 +339,11 @@ class FeedlyUser(FeedlyData):
         """
         return self.user_categories.make_stream_from_id("global.all")
 
-    def get_all_enterprise_categories_stream(self) -> UserCategory:
+    def get_all_enterprise_categories_stream(self) -> EnterpriseCategory:
         """
         :return: the stream containing all the categories followed by the enterprise
         """
-        return self.user_categories.make_stream_from_id("global.enterprise")
+        return self.enterprise_categories.make_stream_from_id("global.all")
 
     def get_all_enterprise_tags_stream(self) -> UserTag:
         """
