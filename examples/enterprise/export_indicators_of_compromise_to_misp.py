@@ -17,7 +17,7 @@ assert MISP_URL, "Please enter MISP url"
 
 def export_indicators_of_compromise_to_misp():
     """
-    This example will export to your MISP instance  the contextualized IoCsthat Leo extracted during the past 6 hours
+    This example will export to your MISP instance the contextualized IoCs that Leo extracted during the past 6 hours
      in all your enterprise feeds.
     """
     # Authenticate using the default auth directory
