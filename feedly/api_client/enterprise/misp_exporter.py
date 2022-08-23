@@ -7,12 +7,10 @@ import requests
 
 class MispExporter:
     def __init__(self, url: str, key: str, ignore_errors: bool = False, verify_certificate: bool = True):
-        self.verify_certificate = verify_certificate
-        self.ignore_errors = ignore_errors
-        if url.endswith("/"):
-            url = url[:-1]
-        self.url = url
+        self.url = url.rstrip("/")
         self.key = key
+        self.ignore_errors = ignore_errors
+        self.verify_certificate = verify_certificate
 
     def send_bundles(self, bundles: Iterable[dict]) -> None:
         self.send_events(event["Event"] for bundle in bundles for event in bundle["response"])

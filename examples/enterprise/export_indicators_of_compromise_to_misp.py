@@ -7,12 +7,12 @@ from feedly.api_client.enterprise.misp_exporter import MispExporter
 from feedly.api_client.session import FeedlySession
 from feedly.api_client.utils import run_example
 
-# Enter your MISP key and URL below
+# Paste your MISP key and URL below
 MISP_KEY = ""
 MISP_URL = ""
 
-assert MISP_KEY, "Please enter your MISP key"
-assert MISP_URL, "Please enter MISP url"
+assert MISP_KEY, "Please paste your MISP key"
+assert MISP_URL, "Please paste MISP url"
 
 
 def export_indicators_of_compromise_to_misp():

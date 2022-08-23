@@ -37,7 +37,6 @@ class IoCDownloaderABC(ABC, Generic[T]):
         """
         self.newer_than = newer_than
         self.session = session
-        self.format = format
         self.stream_id = stream_id
 
     def download_all(self) -> List[T]:
@@ -82,11 +81,12 @@ class IoCDownloaderBuilder:
         :param newer_than: Only articles newer than this parameter will be used. If None only one call will be make,
          and the continuation will be ignored
         """
-        self.newer_than = newer_than
         self.session = session
+        self.format = format
+        self.newer_than = newer_than
+
         self.session.api_host = "https://cloud.feedly.com"
         self.user = self.session.user
-        self.format = format
 
     def from_all_enterprise_categories(self) -> IoCDownloaderABC:
         return self.from_stream(self.user.get_all_enterprise_categories_stream())
