@@ -110,9 +110,9 @@ class StreamOptions:
     to produce url parameters
     """
 
-    def __init__(self, max_count: int = 100):
+    def __init__(self, max_count: int = 100, ranked: str = "newest"):
         self.count: int = 20
-        self.ranked: str = "newest"
+        self.ranked: str = ranked
         self.unreadOnly: bool = False
         self.newerThan: int = None
         self._max_count = max_count
