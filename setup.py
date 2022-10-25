@@ -18,7 +18,7 @@ URL = "https://github.com/feedly/python-api-client"
 EMAIL = "ml@feedly.com"
 AUTHOR = "Feedly"
 REQUIRES_PYTHON = ">=3.6.0"
-VERSION = "0.24"
+VERSION = "0.25"
 
 # What packages are required for this module to be executed?
 with open("requirements.txt") as f:
