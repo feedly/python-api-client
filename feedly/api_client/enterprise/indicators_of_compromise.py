@@ -1,11 +1,11 @@
 import uuid
 from abc import ABC, abstractmethod
+from csv import DictReader
 from datetime import datetime
 from enum import Enum
 from itertools import chain
 from typing import ClassVar, Dict, Generic, Iterable, List, Optional, TypeVar
 from urllib.parse import parse_qs
-
 from requests import Response
 
 from feedly.api_client.data import Streamable
@@ -17,6 +17,7 @@ T = TypeVar("T")
 class IoCFormat(Enum):
     MISP = "misp"
     STIX = "stix2.1"
+    CSV = "csv"
 
 
 class IoCDownloaderABC(ABC, Generic[T]):
@@ -107,7 +108,11 @@ class IoCDownloaderBuilder:
         return self.from_stream_id(stream.id)
 
     def from_stream_id(self, stream_id: str) -> IoCDownloaderABC:
-        format2class = {IoCFormat.MISP: MispIoCDownloader, IoCFormat.STIX: StixIoCDownloader}
+        format2class = {
+            IoCFormat.MISP: MispIoCDownloader,
+            IoCFormat.STIX: StixIoCDownloader,
+            IoCFormat.CSV: CsvIoCDownloader,
+        }
         return format2class[self.format](session=self.session, newer_than=self.newer_than, stream_id=stream_id)
 
 
@@ -127,3 +132,13 @@ class MispIoCDownloader(IoCDownloaderABC[Dict]):
 
     def _merge(self, resp_jsons: Iterable[Dict]) -> Dict:
         return {"response": list(chain.from_iterable(resp_json["response"] for resp_json in resp_jsons))}
+
+
+class CsvIoCDownloader(IoCDownloaderABC[List[Dict]]):
+    FORMAT = "csv"
+
+    def _merge(self, resp_jsons: Iterable[List[Dict]]) -> List[Dict]:
+        return list(chain.from_iterable(resp_jsons))
+
+    def _parse_response(self, resp: Response) -> List[Dict]:
+        return list(DictReader(resp.text.splitlines()))
