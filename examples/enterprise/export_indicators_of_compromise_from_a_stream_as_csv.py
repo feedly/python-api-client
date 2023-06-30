@@ -39,6 +39,8 @@ def example_export_indicators_of_compromise_from_all_enterprise_feeds_as_csv():
 
 
 if __name__ == "__main__":
+    # Warning: This example requires the Threat Intelligence package to be enabled on your account
+
     # Will prompt for the token if missing, and launch the example above
     # If a token expired error is raised, will prompt for a new token and restart the example
     run_example(example_export_indicators_of_compromise_from_all_enterprise_feeds_as_csv)

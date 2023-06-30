@@ -38,6 +38,8 @@ def export_indicators_of_compromise_to_misp():
 
 
 if __name__ == "__main__":
+    # Warning: This example requires the Threat Intelligence package to be enabled on your account
+
     logging.basicConfig(level="INFO")
     filterwarnings("ignore")
 
