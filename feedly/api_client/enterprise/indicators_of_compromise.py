@@ -30,6 +30,7 @@ class IoCDownloaderABC(ABC, Generic[T]):
         newer_than: Optional[datetime],
         older_than: Optional[datetime],
         stream_id: str,
+        max_batches: Optional[int] = None,
     ):
         """
         Use this class to export the contextualized IoCs from a stream.
@@ -38,23 +39,27 @@ class IoCDownloaderABC(ABC, Generic[T]):
          STIX v2.1 Bundle object. https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_gms872kuzdmg
         Use the newer_than parameter to filter articles that are newer than your last call.
         Use the older_than parameter to filter articles that are older than your last call.
+        Use the max_batches parameter to limit the number of batches/pages to retrieve.
 
         :param session: The authenticated session to use to make the api calls
         :param newer_than: Only articles newer than this parameter will be used. If None only one call will be make,
          and the continuation will be ignored
         :param older_than: Only articles older than this parameter will be used. If None only one call will be make,
          and the continuation will be ignored
+        :param max_batches: Maximum number of batches to retrieve. If None, will continue until no more data is available
         """
         self.newer_than = newer_than
         self.older_than = older_than
         self.session = session
         self.stream_id = stream_id
+        self.max_batches = max_batches
 
     def download_all(self) -> List[T]:
         return self._merge(self.stream_bundles())
 
     def stream_bundles(self) -> Iterable[T]:
         continuation = None
+        batch_count = 0
         while True:
             params = {
                 "continuation": continuation,
@@ -68,6 +73,12 @@ class IoCDownloaderABC(ABC, Generic[T]):
 
             resp = self.session.make_api_request(f"{self.RELATIVE_URL}", params=params)
             yield self._parse_response(resp)
+            batch_count += 1
+
+            # Check if we've reached max_batches limit
+            if self.max_batches and batch_count >= self.max_batches:
+                return
+
             if (
                 not self.newer_than and not self.older_than
             ) or "link" not in resp.headers:
@@ -84,7 +95,14 @@ class IoCDownloaderABC(ABC, Generic[T]):
 
 
 class IoCDownloaderBuilder:
-    def __init__(self, session: FeedlySession, format: IoCFormat, newer_than: Optional[datetime] = None, older_than: Optional[datetime] = None):
+    def __init__(
+        self,
+        session: FeedlySession,
+        format: IoCFormat,
+        newer_than: Optional[datetime] = None,
+        older_than: Optional[datetime] = None,
+        max_batches: Optional[int] = None,
+    ):
         """
         Use this class to export the contextualized IoCs from a stream.
         Enterprise/personals feeds/boards are supported (see dedicated methods below).
@@ -92,17 +110,20 @@ class IoCDownloaderBuilder:
          STIX v2.1 Bundle object. https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_gms872kuzdmg
         Use the newer_than parameter to filter articles that are newer than your last call.
         Use the older_than parameter to filter articles that are older than your last call.
+        Use the max_batches parameter to limit the number of batches/pages to retrieve.
 
         :param session: The authenticated session to use to make the api calls
         :param newer_than: Only articles newer than this parameter will be used. If None only one call will be make,
          and the continuation will be ignored
         :param older_than: Only articles older than this parameter will be used. If None only one call will be make,
          and the continuation will be ignored
+        :param max_batches: Maximum number of batches to retrieve. If None, will continue until no more data is available
         """
         self.session = session
         self.format = format
         self.newer_than = newer_than
         self.older_than = older_than
+        self.max_batches = max_batches
 
         self.session.api_host = "https://cloud.feedly.com"
         self.user = self.session.user
@@ -136,6 +157,7 @@ class IoCDownloaderBuilder:
             newer_than=self.newer_than,
             older_than=self.older_than,
             stream_id=stream_id,
+            max_batches=self.max_batches,
         )
 
 
