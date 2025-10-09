@@ -4,9 +4,9 @@ from csv import DictReader
 from datetime import datetime
 from enum import Enum
 from itertools import chain
+from requests import Response
 from typing import ClassVar, Dict, Generic, Iterable, List, Optional, TypeVar
 from urllib.parse import parse_qs
-from requests import Response
 
 from feedly.api_client.data import Streamable
 from feedly.api_client.session import FeedlySession
@@ -24,7 +24,13 @@ class IoCDownloaderABC(ABC, Generic[T]):
     RELATIVE_URL = "/v3/enterprise/ioc"
     FORMAT: ClassVar[str]
 
-    def __init__(self, session: FeedlySession, newer_than: Optional[datetime], older_than: Optional[datetime], stream_id: str):
+    def __init__(
+        self,
+        session: FeedlySession,
+        newer_than: Optional[datetime],
+        older_than: Optional[datetime],
+        stream_id: str,
+    ):
         """
         Use this class to export the contextualized IoCs from a stream.
         Enterprise/personals feeds/boards are supported (see dedicated methods below).
@@ -60,12 +66,11 @@ class IoCDownloaderABC(ABC, Generic[T]):
             if self.older_than:
                 params["olderThan"] = int(self.older_than.timestamp())
 
-            resp = self.session.make_api_request(
-                f"{self.RELATIVE_URL}",
-                params=params,
-            )
+            resp = self.session.make_api_request(f"{self.RELATIVE_URL}", params=params)
             yield self._parse_response(resp)
-            if (not self.newer_than and not self.older_than) or "link" not in resp.headers:
+            if (
+                not self.newer_than and not self.older_than
+            ) or "link" not in resp.headers:
                 return
             next_url = resp.headers["link"][1:].split(">")[0]
             continuation = parse_qs(next_url)["continuation"][0]
@@ -126,7 +131,12 @@ class IoCDownloaderBuilder:
             IoCFormat.STIX: StixIoCDownloader,
             IoCFormat.CSV: CsvIoCDownloader,
         }
-        return format2class[self.format](session=self.session, newer_than=self.newer_than, older_than=self.older_than, stream_id=stream_id)
+        return format2class[self.format](
+            session=self.session,
+            newer_than=self.newer_than,
+            older_than=self.older_than,
+            stream_id=stream_id,
+        )
 
 
 class StixIoCDownloader(IoCDownloaderABC[Dict]):
