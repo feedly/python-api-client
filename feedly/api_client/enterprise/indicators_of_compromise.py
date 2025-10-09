@@ -24,19 +24,23 @@ class IoCDownloaderABC(ABC, Generic[T]):
     RELATIVE_URL = "/v3/enterprise/ioc"
     FORMAT: ClassVar[str]
 
-    def __init__(self, session: FeedlySession, newer_than: Optional[datetime], stream_id: str):
+    def __init__(self, session: FeedlySession, newer_than: Optional[datetime], older_than: Optional[datetime], stream_id: str):
         """
         Use this class to export the contextualized IoCs from a stream.
         Enterprise/personals feeds/boards are supported (see dedicated methods below).
         The IoCs will be returned along with their context and relationships in a dictionary representing a valid
          STIX v2.1 Bundle object. https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_gms872kuzdmg
         Use the newer_than parameter to filter articles that are newer than your last call.
+        Use the older_than parameter to filter articles that are older than your last call.
 
         :param session: The authenticated session to use to make the api calls
         :param newer_than: Only articles newer than this parameter will be used. If None only one call will be make,
          and the continuation will be ignored
+        :param older_than: Only articles older than this parameter will be used. If None only one call will be make,
+         and the continuation will be ignored
         """
         self.newer_than = newer_than
+        self.older_than = older_than
         self.session = session
         self.stream_id = stream_id
 
@@ -46,17 +50,22 @@ class IoCDownloaderABC(ABC, Generic[T]):
     def stream_bundles(self) -> Iterable[T]:
         continuation = None
         while True:
+            params = {
+                "continuation": continuation,
+                "streamId": self.stream_id,
+                "format": self.FORMAT,
+            }
+            if self.newer_than:
+                params["newerThan"] = int(self.newer_than.timestamp())
+            if self.older_than:
+                params["olderThan"] = int(self.older_than.timestamp())
+
             resp = self.session.make_api_request(
                 f"{self.RELATIVE_URL}",
-                params={
-                    "newerThan": int(self.newer_than.timestamp()) if self.newer_than else None,
-                    "continuation": continuation,
-                    "streamId": self.stream_id,
-                    "format": self.FORMAT,
-                },
+                params=params,
             )
             yield self._parse_response(resp)
-            if not self.newer_than or "link" not in resp.headers:
+            if (not self.newer_than and not self.older_than) or "link" not in resp.headers:
                 return
             next_url = resp.headers["link"][1:].split(">")[0]
             continuation = parse_qs(next_url)["continuation"][0]
@@ -70,21 +79,25 @@ class IoCDownloaderABC(ABC, Generic[T]):
 
 
 class IoCDownloaderBuilder:
-    def __init__(self, session: FeedlySession, format: IoCFormat, newer_than: Optional[datetime] = None):
+    def __init__(self, session: FeedlySession, format: IoCFormat, newer_than: Optional[datetime] = None, older_than: Optional[datetime] = None):
         """
         Use this class to export the contextualized IoCs from a stream.
         Enterprise/personals feeds/boards are supported (see dedicated methods below).
         The IoCs will be returned along with their context and relationships in a dictionary representing a valid
          STIX v2.1 Bundle object. https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_gms872kuzdmg
         Use the newer_than parameter to filter articles that are newer than your last call.
+        Use the older_than parameter to filter articles that are older than your last call.
 
         :param session: The authenticated session to use to make the api calls
         :param newer_than: Only articles newer than this parameter will be used. If None only one call will be make,
+         and the continuation will be ignored
+        :param older_than: Only articles older than this parameter will be used. If None only one call will be make,
          and the continuation will be ignored
         """
         self.session = session
         self.format = format
         self.newer_than = newer_than
+        self.older_than = older_than
 
         self.session.api_host = "https://cloud.feedly.com"
         self.user = self.session.user
@@ -113,7 +126,7 @@ class IoCDownloaderBuilder:
             IoCFormat.STIX: StixIoCDownloader,
             IoCFormat.CSV: CsvIoCDownloader,
         }
-        return format2class[self.format](session=self.session, newer_than=self.newer_than, stream_id=stream_id)
+        return format2class[self.format](session=self.session, newer_than=self.newer_than, older_than=self.older_than, stream_id=stream_id)
 
 
 class StixIoCDownloader(IoCDownloaderABC[Dict]):
