@@ -79,9 +79,7 @@ class IoCDownloaderABC(ABC, Generic[T]):
             if self.max_batches and batch_count >= self.max_batches:
                 return
 
-            if (
-                not self.newer_than and not self.older_than
-            ) or "link" not in resp.headers:
+            if not self.newer_than or "link" not in resp.headers:
                 return
             next_url = resp.headers["link"][1:].split(">")[0]
             continuation = parse_qs(next_url)["continuation"][0]
